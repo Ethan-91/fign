@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en" dir=>
+
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="匿名Token发行原理# ZORRO是全球首个支持图灵完备智能合约的隐私区块链系统，既然是支持智能合约，当然不可能是简单的智能合约&#43;匿名币。ZORRO深度整合了两者的优点：智能合约的开放性、隐私系统的封闭性。在这两种特性的支持下，ZORRO的智能合约具有非常令人兴奋的特性，可以做到一些神奇的事情。
+本文主要讲解ZORRO提供的 匿名 Token API 在智能合约的应用，并在开篇简要的介绍一下匿名Token的生成原理。
+一、UTXO和ACCOUNT# 了解区块链构成的读者应该都知道，区块链是一个分布式账本，每个账本包含多笔交易Tx，而每笔交易又包含有多个记录。账本最小的单位是记录，每一笔帐记录一个账户资产的流入或者流出。但从实际的实现方式看，根据资产流出记录方式的不同，区块链系统演化出两种不同的记账实现，我们分别称之为UTXO模式和ACCOUNT模式。这两种模式分别对应比特币和以太坊的模式。而ZORRO则采用更为复杂的混合模式。
+基于UTXO的交易#如上图，UTXO模式的记录有两种，对交易发起者来说就是Input和Output，这个Output在交易接受方看来就是未花费输出(UTXO)，直到交易接受者再发起一个交易，指定一个Input将这个UTXO作废掉。交易中的记录始终在链接各种输入和输出。在这种模式下，ACCOUNT作为一种状态摘要，不是必须的。
+例如在上图中，Alice之前收到过一个交易Tx 0，这笔交易有一个输出UTXO 0，UTXO 0中有V个ZORRO币，她的账户上可以记录 [&#43;V ZORRO,BALANCE=V]。而之后她将这V个ZORRO币转给Bob，那么她生成一个交易Tx 1，这个交易有一个Input将UTXO 0作废掉，那么Alice的ACCOUNT就应该记录[-V ZORRO,BALANCE=0]。而对于Bob，他就增加了一个价值为V个ZORRO的UTXO 1，如果他的ACCOUNT之前的BALANCE是0，它账户上就可以记录[&#43;V ZORRO,BALANCE=V]。
+这种模式有两个优点：
+ UTXO模式每笔交易是相互独立的，这意味着只要能处理好双花的问题，一个账户下的交易都可以并行处理，能充分应用多核CPU的能力。 UTXO本质上来说就是基于历史的记录形式，既是过程，也是结果，因此在一些需要生成见证证明的应用场合下，具有非常大的优势。这也是为什么具有隐私特性的区块链系统基本都是UTXO模式的。  基于ACCOUNT的交易#之前UTXO模式说到了每个账户可以生成一个临时的ACCOUNT作为状态摘要，在UTXO模式中，这个账户是临时的，不是必须的。而ACCOUNT模式中，交易中的每个资产流入流出记录都引用ACCOUNT而不是UTXO，记录Input表示增加这个ACCOUNT的资产，而记录Output表示减少一个账户的资产。在这种模式下，ACCOUNT实体是必须的，没有这个ACCOUNT，所有的记录都没有了意义。
+跟上面一样，例如，Alice之前收到过一个交易Tx 0，这个交易有一个资产值为V个ZORRO的输出Output 0，她的ACCOUNT将增加V个ZORRO。这时她要给Bob转出V个ZORRO币，那么她发起一笔交易，交易的Input指向她的ACCOUNT，价值为V ZORRO币，Output 1指向Bob的ACCOUNT，价值也是V ZORRO币，那么这笔交易被系统处理的时候，将直接加减双方的ACCOUNT中的资产。在这种模式下，Alice并不能区分这个Input究竟是使用的Output 0输入的ZORRO币还是之前就已经存放在ACCOUNT的ZORRO币。
+ACCOUNT模式也有两个优势
+ ACCOUNT模式直接增减一个独立账户中的资产，只需一个记录就可以增减一个账户的任意数量的资产。因此，生成的记录大小比同样情况下UTXO生成的记录要小很多。 ACCOUNT模式本质上是基于状态的，Input和Output是过程，ACCOUNT是结果，因此它天然就容易将图灵机引进来，这也是为什么支持图灵完备智能合约的区块链系统多采用ACCOUNT模式的原因。  ZORRO的混合模式#ZORRO将UTXO和ACCOUNT模式混合应用，在需要支持隐私保护的地方采用UTXO模式，在需要运行智能合约的地方采用ACCOUNT模式。ZORRO通过交易、共识、以及Pedersen Commitment算法，将这两种模式无缝的整合到一起，使智能合约能发挥令人惊讶的能力。
+ 本文所提到的智能合约，在ZORRO的白皮书中，对应 链上运行智能合约 这个概念
+ 二、匿名交易结构# 在BetaNet网络中，ZORRO的普通交易是强制匿名的。因为如果可以允许任意非匿名交易，那么想要使用匿名功能的用户的隐私安全在关联交易中将得不到保证。另外，如果想要公示自己的资产等信息，建议使用智能合约，有限度的公开部分信息。
+ 在MainNet发布时，ZORRO通过选择隐私级别来获得隐私性和生成速度的平衡。
+ 交易 Tx#ZORRO的匿名交易Tx拥有一个匿名的输入集合Z ins，一个匿名输出集合Z outs，一个普通输出集合O outs，和一个名为From的暂存地址。Z ins完全是匿名的，让第三方观察者无法得知来源和内容，Z outs是完全匿名的UTXO，只有接收者能查看和使用它的内容，O outs携带的内容是非隐藏的，它指向的接受者有两种情况：一种是指向智能合约地址，一种是指向一个暂存地址。From代表着交易发送者，同样也是一个暂存地址。因此整个Tx无法让人确定真实的用户是谁，其中携带的资产等信息也最大程度被隐藏起来。">
+<meta name="theme-color" content="#FFFFFF"><meta property="og:title" content="匿名Token发行原理" />
+<meta property="og:description" content="匿名Token发行原理# ZORRO是全球首个支持图灵完备智能合约的隐私区块链系统，既然是支持智能合约，当然不可能是简单的智能合约&#43;匿名币。ZORRO深度整合了两者的优点：智能合约的开放性、隐私系统的封闭性。在这两种特性的支持下，ZORRO的智能合约具有非常令人兴奋的特性，可以做到一些神奇的事情。
+本文主要讲解ZORRO提供的 匿名 Token API 在智能合约的应用，并在开篇简要的介绍一下匿名Token的生成原理。
+一、UTXO和ACCOUNT# 了解区块链构成的读者应该都知道，区块链是一个分布式账本，每个账本包含多笔交易Tx，而每笔交易又包含有多个记录。账本最小的单位是记录，每一笔帐记录一个账户资产的流入或者流出。但从实际的实现方式看，根据资产流出记录方式的不同，区块链系统演化出两种不同的记账实现，我们分别称之为UTXO模式和ACCOUNT模式。这两种模式分别对应比特币和以太坊的模式。而ZORRO则采用更为复杂的混合模式。
+基于UTXO的交易#如上图，UTXO模式的记录有两种，对交易发起者来说就是Input和Output，这个Output在交易接受方看来就是未花费输出(UTXO)，直到交易接受者再发起一个交易，指定一个Input将这个UTXO作废掉。交易中的记录始终在链接各种输入和输出。在这种模式下，ACCOUNT作为一种状态摘要，不是必须的。
+例如在上图中，Alice之前收到过一个交易Tx 0，这笔交易有一个输出UTXO 0，UTXO 0中有V个ZORRO币，她的账户上可以记录 [&#43;V ZORRO,BALANCE=V]。而之后她将这V个ZORRO币转给Bob，那么她生成一个交易Tx 1，这个交易有一个Input将UTXO 0作废掉，那么Alice的ACCOUNT就应该记录[-V ZORRO,BALANCE=0]。而对于Bob，他就增加了一个价值为V个ZORRO的UTXO 1，如果他的ACCOUNT之前的BALANCE是0，它账户上就可以记录[&#43;V ZORRO,BALANCE=V]。
+这种模式有两个优点：
+ UTXO模式每笔交易是相互独立的，这意味着只要能处理好双花的问题，一个账户下的交易都可以并行处理，能充分应用多核CPU的能力。 UTXO本质上来说就是基于历史的记录形式，既是过程，也是结果，因此在一些需要生成见证证明的应用场合下，具有非常大的优势。这也是为什么具有隐私特性的区块链系统基本都是UTXO模式的。  基于ACCOUNT的交易#之前UTXO模式说到了每个账户可以生成一个临时的ACCOUNT作为状态摘要，在UTXO模式中，这个账户是临时的，不是必须的。而ACCOUNT模式中，交易中的每个资产流入流出记录都引用ACCOUNT而不是UTXO，记录Input表示增加这个ACCOUNT的资产，而记录Output表示减少一个账户的资产。在这种模式下，ACCOUNT实体是必须的，没有这个ACCOUNT，所有的记录都没有了意义。
+跟上面一样，例如，Alice之前收到过一个交易Tx 0，这个交易有一个资产值为V个ZORRO的输出Output 0，她的ACCOUNT将增加V个ZORRO。这时她要给Bob转出V个ZORRO币，那么她发起一笔交易，交易的Input指向她的ACCOUNT，价值为V ZORRO币，Output 1指向Bob的ACCOUNT，价值也是V ZORRO币，那么这笔交易被系统处理的时候，将直接加减双方的ACCOUNT中的资产。在这种模式下，Alice并不能区分这个Input究竟是使用的Output 0输入的ZORRO币还是之前就已经存放在ACCOUNT的ZORRO币。
+ACCOUNT模式也有两个优势
+ ACCOUNT模式直接增减一个独立账户中的资产，只需一个记录就可以增减一个账户的任意数量的资产。因此，生成的记录大小比同样情况下UTXO生成的记录要小很多。 ACCOUNT模式本质上是基于状态的，Input和Output是过程，ACCOUNT是结果，因此它天然就容易将图灵机引进来，这也是为什么支持图灵完备智能合约的区块链系统多采用ACCOUNT模式的原因。  ZORRO的混合模式#ZORRO将UTXO和ACCOUNT模式混合应用，在需要支持隐私保护的地方采用UTXO模式，在需要运行智能合约的地方采用ACCOUNT模式。ZORRO通过交易、共识、以及Pedersen Commitment算法，将这两种模式无缝的整合到一起，使智能合约能发挥令人惊讶的能力。
+ 本文所提到的智能合约，在ZORRO的白皮书中，对应 链上运行智能合约 这个概念
+ 二、匿名交易结构# 在BetaNet网络中，ZORRO的普通交易是强制匿名的。因为如果可以允许任意非匿名交易，那么想要使用匿名功能的用户的隐私安全在关联交易中将得不到保证。另外，如果想要公示自己的资产等信息，建议使用智能合约，有限度的公开部分信息。
+ 在MainNet发布时，ZORRO通过选择隐私级别来获得隐私性和生成速度的平衡。
+ 交易 Tx#ZORRO的匿名交易Tx拥有一个匿名的输入集合Z ins，一个匿名输出集合Z outs，一个普通输出集合O outs，和一个名为From的暂存地址。Z ins完全是匿名的，让第三方观察者无法得知来源和内容，Z outs是完全匿名的UTXO，只有接收者能查看和使用它的内容，O outs携带的内容是非隐藏的，它指向的接受者有两种情况：一种是指向智能合约地址，一种是指向一个暂存地址。From代表着交易发送者，同样也是一个暂存地址。因此整个Tx无法让人确定真实的用户是谁，其中携带的资产等信息也最大程度被隐藏起来。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://Ethan-91.github.com/docs/course/principle-of-anonymous-token/" />
+
+<title>匿名Token发行原理 | ZORRO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.b3215d9d1d18d9051e7fbe8f256ff80e30f41d29073b86348e230d297b771002.css" integrity="sha256-syFdnR0Y2QUef76PJW/4DjD0HSkHO4Y0jiMNKXt3EAI=">
+<script defer src="/en.search.min.022645c8e8e1021cc95951c67f07e20a34849535ba3f4d6f6cd92dad13d673e0.js" integrity="sha256-AiZFyOjhAhzJWVHGfwfiCjSElTW6P01vbNktrRPWc&#43;A="></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+  
+</head>
+
+<body dir=>
+  <input type="checkbox" class="hidden" id="menu-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      
+  <nav>
+<h2 class="book-brand">
+  <a href="/"><span>ZORRO</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>轻松入门</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/build-from-sourcecoude/" class="">源码编译</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/operate-in-console/" class="">控制台操作</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>教程</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/service-interface/" class="">NODE对接(SI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/exchange-interface/" class="">WALLET对接(EI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/flight-interface/" class="">Flight接口说明</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/principle-of-anonymous-token/" class="active">匿名Token发行原理</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/how-to-staking-using-gero/" class="">如何在ZORRO上进行Staking</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>匿名Token发行原理</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+    <input type="checkbox" class="hidden" id="toc-control" />
+    <aside class="hidden clearfix">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#一utxo和account"><strong>一、UTXO和ACCOUNT</strong></a>
+      <ul>
+        <li><a href="#基于utxo的交易"><strong>基于UTXO的交易</strong></a></li>
+        <li><a href="#基于account的交易"><strong>基于ACCOUNT的交易</strong></a></li>
+        <li><a href="#zorro的混合模式"><strong>ZORRO的混合模式</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#二匿名交易结构"><strong>二、匿名交易结构</strong></a>
+      <ul>
+        <li><a href="#交易-tx"><strong>交易 <code>Tx</code></strong></a></li>
+        <li><a href="#输入-z-ins"><strong>输入 <code>Z ins</code></strong></a></li>
+        <li><a href="#两种不同的输出-outs"><strong>两种不同的输出 <code>outs</code></strong></a></li>
+        <li><a href="#输入和输出的平衡-balance"><strong>输入和输出的平衡 <code>Balance</code></strong></a></li>
+        <li><a href="#交易发送者-from"><strong>交易发送者 <code>From</code></strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#三发行匿名token的原理"><strong>三、发行匿名Token的原理</strong></a>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+    </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><h1 id="匿名token发行原理">
+  <strong>匿名Token发行原理</strong>
+  <a class="anchor" href="#%e5%8c%bf%e5%90%8dtoken%e5%8f%91%e8%a1%8c%e5%8e%9f%e7%90%86">#</a>
+</h1>
+<hr>
+<p>ZORRO是全球首个支持图灵完备智能合约的隐私区块链系统，既然是支持智能合约，当然不可能是简单的智能合约+匿名币。ZORRO深度整合了两者的优点：智能合约的开放性、隐私系统的封闭性。在这两种特性的支持下，ZORRO的智能合约具有非常令人兴奋的特性，可以做到一些神奇的事情。</p>
+<p>本文主要讲解ZORRO提供的 <code>匿名 Token API</code> 在智能合约的应用，并在开篇简要的介绍一下匿名Token的生成原理。</p>
+<h2 id="一utxo和account">
+  <strong>一、UTXO和ACCOUNT</strong>
+  <a class="anchor" href="#%e4%b8%80utxo%e5%92%8caccount">#</a>
+</h2>
+<hr>
+<p>了解区块链构成的读者应该都知道，区块链是一个分布式账本，每个账本包含多笔交易<code>Tx</code>，而每笔交易又包含有多个记录。账本最小的单位是记录，每一笔帐记录一个账户资产的流入或者流出。但从实际的实现方式看，根据资产流出记录方式的不同，区块链系统演化出两种不同的记账实现，我们分别称之为UTXO模式和ACCOUNT模式。这两种模式分别对应比特币和以太坊的模式。而ZORRO则采用更为复杂的混合模式。</p>
+<h3 id="基于utxo的交易">
+  <strong>基于UTXO的交易</strong>
+  <a class="anchor" href="#%e5%9f%ba%e4%ba%8eutxo%e7%9a%84%e4%ba%a4%e6%98%93">#</a>
+</h3>
+<p><img src="http://sero-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-d4f32a0a0768aca8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p>如上图，UTXO模式的记录有两种，对交易发起者来说就是<code>Input</code>和<code>Output</code>，这个<code>Output</code>在交易接受方看来就是<code>未花费输出(UTXO)</code>，直到交易接受者再发起一个交易，指定一个<code>Input</code>将这个<code>UTXO</code>作废掉。交易中的记录始终在链接各种输入和输出。在这种模式下，<code>ACCOUNT</code>作为一种状态摘要，不是必须的。</p>
+<p>例如在上图中，Alice之前收到过一个交易<code>Tx 0</code>，这笔交易有一个输出<code>UTXO 0</code>，<code>UTXO 0</code>中有V个ZORRO币，她的账户上可以记录 [+V ZORRO,BALANCE=V]。而之后她将这V个ZORRO币转给Bob，那么她生成一个交易<code>Tx 1</code>，这个交易有一个<code>Input</code>将<code>UTXO 0</code>作废掉，那么Alice的<code>ACCOUNT</code>就应该记录[-V ZORRO,BALANCE=0]。而对于Bob，他就增加了一个价值为V个ZORRO的<code>UTXO 1</code>，如果他的<code>ACCOUNT</code>之前的<code>BALANCE</code>是0，它账户上就可以记录[+V ZORRO,BALANCE=V]。</p>
+<p><strong>这种模式有两个优点：</strong></p>
+<ol>
+<li>UTXO模式每笔交易是相互独立的，这意味着只要能处理好双花的问题，一个账户下的交易都可以并行处理，能充分应用多核CPU的能力。</li>
+<li>UTXO本质上来说就是基于历史的记录形式，既是过程，也是结果，因此在一些需要生成见证证明的应用场合下，具有非常大的优势。这也是为什么具有隐私特性的区块链系统基本都是UTXO模式的。</li>
+</ol>
+<h3 id="基于account的交易">
+  <strong>基于ACCOUNT的交易</strong>
+  <a class="anchor" href="#%e5%9f%ba%e4%ba%8eaccount%e7%9a%84%e4%ba%a4%e6%98%93">#</a>
+</h3>
+<p><img src="http://sero-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-0ee97ccbafff9d07.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p>之前UTXO模式说到了每个账户可以生成一个临时的<code>ACCOUNT</code>作为状态摘要，在UTXO模式中，这个账户是临时的，不是必须的。而ACCOUNT模式中，交易中的每个资产流入流出记录都引用<code>ACCOUNT</code>而不是<code>UTXO</code>，记录<code>Input</code>表示增加这个<code>ACCOUNT</code>的资产，而记录<code>Output</code>表示减少一个账户的资产。在这种模式下，<code>ACCOUNT</code>实体是必须的，没有这个<code>ACCOUNT</code>，所有的记录都没有了意义。</p>
+<p>跟上面一样，例如，Alice之前收到过一个交易<code>Tx 0</code>，这个交易有一个资产值为V个ZORRO的输出<code>Output 0</code>，她的<code>ACCOUNT</code>将增加V个ZORRO。这时她要给Bob转出V个ZORRO币，那么她发起一笔交易，交易的<code>Input</code>指向她的<code>ACCOUNT</code>，价值为V ZORRO币，<code>Output 1</code>指向Bob的<code>ACCOUNT</code>，价值也是V ZORRO币，那么这笔交易被系统处理的时候，将直接加减双方的<code>ACCOUNT</code>中的资产。在这种模式下，Alice并不能区分这个<code>Input</code>究竟是使用的<code>Output 0</code>输入的ZORRO币还是之前就已经存放在<code>ACCOUNT</code>的ZORRO币。</p>
+<p><strong>ACCOUNT模式也有两个优势</strong></p>
+<ol>
+<li>ACCOUNT模式直接增减一个独立账户中的资产，只需一个记录就可以增减一个账户的任意数量的资产。因此，生成的记录大小比同样情况下UTXO生成的记录要小很多。</li>
+<li>ACCOUNT模式本质上是基于状态的，<code>Input</code>和<code>Output</code>是过程，<code>ACCOUNT</code>是结果，因此它天然就容易将图灵机引进来，这也是为什么支持图灵完备智能合约的区块链系统多采用ACCOUNT模式的原因。</li>
+</ol>
+<h3 id="zorro的混合模式">
+  <strong>ZORRO的混合模式</strong>
+  <a class="anchor" href="#zorro%e7%9a%84%e6%b7%b7%e5%90%88%e6%a8%a1%e5%bc%8f">#</a>
+</h3>
+<p><img src="http://sero-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-00dcc847debac203.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p>ZORRO将UTXO和ACCOUNT模式混合应用，在需要支持隐私保护的地方采用UTXO模式，在需要运行智能合约的地方采用ACCOUNT模式。ZORRO通过交易、共识、以及Pedersen Commitment算法，将这两种模式无缝的整合到一起，使智能合约能发挥令人惊讶的能力。</p>
+<blockquote>
+<p><em>本文所提到的<code>智能合约</code>，在ZORRO的白皮书中，对应 <code>链上运行智能合约</code> 这个概念</em></p>
+</blockquote>
+<h2 id="二匿名交易结构">
+  <strong>二、匿名交易结构</strong>
+  <a class="anchor" href="#%e4%ba%8c%e5%8c%bf%e5%90%8d%e4%ba%a4%e6%98%93%e7%bb%93%e6%9e%84">#</a>
+</h2>
+<hr>
+<p>在BetaNet网络中，ZORRO的普通交易是强制匿名的。因为如果可以允许任意非匿名交易，那么想要使用匿名功能的用户的隐私安全在关联交易中将得不到保证。另外，如果想要公示自己的资产等信息，建议使用智能合约，有限度的公开部分信息。</p>
+<blockquote>
+<p>在MainNet发布时，ZORRO通过选择隐私级别来获得隐私性和生成速度的平衡。</p>
+</blockquote>
+<h3 id="交易-tx">
+  <strong>交易 <code>Tx</code></strong>
+  <a class="anchor" href="#%e4%ba%a4%e6%98%93-tx">#</a>
+</h3>
+<p><img src="http://sero-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-9c52fb6586e6ba0e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p>ZORRO的匿名交易<code>Tx</code>拥有一个匿名的输入集合<code>Z ins</code>，一个匿名输出集合<code>Z outs</code>，一个普通输出集合<code>O outs</code>，和一个名为<code>From</code>的暂存地址。<code>Z ins</code>完全是匿名的，让第三方观察者无法得知来源和内容，<code>Z outs</code>是完全匿名的<code>UTXO</code>，只有接收者能查看和使用它的内容，<code>O outs</code>携带的内容是非隐藏的，它指向的接受者有两种情况：一种是指向智能合约地址，一种是指向一个暂存地址。<code>From</code>代表着交易发送者，同样也是一个暂存地址。因此整个<code>Tx</code>无法让人确定真实的用户是谁，其中携带的资产等信息也最大程度被隐藏起来。</p>
+<h3 id="输入-z-ins">
+  <strong>输入 <code>Z ins</code></strong>
+  <a class="anchor" href="#%e8%be%93%e5%85%a5-z-ins">#</a>
+</h3>
+<p><img src="http://sero-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-52d7661f96f8479b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p>在ZORRO交易的输入集合<code>Z ins</code>中，每个输入都是匿名的，包括来源<code>UTXO</code>的Id以及携带的资产信息。每个输入都通过采用零知识证明<code>ZKP</code>生成的<code>Proof</code>，指向一个被隐藏在巨大的<code>UTXO</code>序列中特定的某个<code>UTXO</code>，这个序列是ZORRO历史的一部分，所有的细节信息被<code>Proof</code>隐藏起来。验证者在不知道细节信息的情况下，通过<code>Proof</code>能确认这个输入是否合法。这种方式跟环签很像，不过我们的<code>Proof</code>自身的大小要比环签小很多，而且在零知识证明下，用来隐匿UTXO的集合的范围比环签也要大得多。</p>
+<h3 id="两种不同的输出-outs">
+  <strong>两种不同的输出 <code>outs</code></strong>
+  <a class="anchor" href="#%e4%b8%a4%e7%a7%8d%e4%b8%8d%e5%90%8c%e7%9a%84%e8%be%93%e5%87%ba-outs">#</a>
+</h3>
+<p><img src="http://sero-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-01ae40ec8cdfb86f.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/600" alt="image.png" /></p>
+<p>ZORRO交易中包含的输出分为两种形式，零知识输出<code>Z out</code>和普通输出<code>O out</code>。</p>
+<p><strong>Z out</strong>
+<code>Z out</code>指向的是暂存地址<code>PKr</code>，暂存地址只有接受者能解密出身份。由于每个暂存地址都不一样，所以，没有第三方能够识别<code>Z out</code>的指向。<code>Z out</code>还携带了资产的加密信息<code>Encrypt Info</code>，只有持有接受者私钥的人才能解密这些信息。而<code>OutCM</code>是输出承诺，只有交易的双方才能够复现<code>OutCM</code>的计算过程。<code>OutCM</code>在证明 “<code>Z out</code>被<code>ins</code>引用” 这一过程起到至关重要的作用。</p>
+<p><strong>O out</strong>
+<code>O out</code>指向的PKr有两种形式，一种是由智能合约发起的，指向普通账户的暂存地址。另一种是由普通账户发起的，指向智能合约的地址。由于暂存地址的随机性，第三方无法得知接受者的身份，<code>O out</code>携带的资产信息是公开的。</p>
+<h3 id="输入和输出的平衡-balance">
+  <strong>输入和输出的平衡 <code>Balance</code></strong>
+  <a class="anchor" href="#%e8%be%93%e5%85%a5%e5%92%8c%e8%be%93%e5%87%ba%e7%9a%84%e5%b9%b3%e8%a1%a1-balance">#</a>
+</h3>
+<p><img src="http://ZORRO-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-f95d65efdd4e239d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/400" alt="image.png" /></p>
+<p><code>Tx</code>将<code>ins</code>、<code>Z outs</code>、<code>O outs</code>打包到一起，如何防止恶意攻击者篡改里面的数据并确保资产安全呢，我们通过引入<strong>perdesen commitment</strong>，它的同态加密特性使验证者在不知道信息细节的情况下，可以确认Balance一定是平衡的，即输入等于输出。</p>
+<p>另外，为了防止恶意攻击者对<code>O outs</code>的篡改，我们利用<strong>perdesen commitment</strong>的随机特性，以<code>Balance</code>的随机部分对<code>Tx Hash</code>进行签名。如此以来，各个输入输出都可以独立进行计算，然后通过<code>B-Sign</code>打包到一起。</p>
+<h3 id="交易发送者-from">
+  <strong>交易发送者 <code>From</code></strong>
+  <a class="anchor" href="#%e4%ba%a4%e6%98%93%e5%8f%91%e9%80%81%e8%80%85-from">#</a>
+</h3>
+<p>当交易的输出是指向智能合约时，智能合约有时根据编写的规则，需要将资源给输出到给定的账户。这时暂存地址<code>From</code>就是承接输出资源的地方。<code>From</code>在交易生成的时候就被确定，并且只使用一次，除了交易发送者外，其他人无法定位发送者的身份。</p>
+<h2 id="三发行匿名token的原理">
+  <strong>三、发行匿名Token的原理</strong>
+  <a class="anchor" href="#%e4%b8%89%e5%8f%91%e8%a1%8c%e5%8c%bf%e5%90%8dtoken%e7%9a%84%e5%8e%9f%e7%90%86">#</a>
+</h2>
+<hr>
+<h4 id="token资产">
+  <strong>Token资产</strong>
+  <a class="anchor" href="#token%e8%b5%84%e4%ba%a7">#</a>
+</h4>
+<p>Token又称之为“同质化通证”，是ZORRO系统内部承认的一种资产形式。相同种类的Token可以任意的分割和混合，具体来说就是所谓的“币”。ZORRO币作为ZORRO系统的第一个币种，本质上也是一种Token。对于Token资产，除了手续费规定只能以ZORRO币缴纳外，在ZORRO系统的内部是同一对待的，由共识确保其隐私和安全性。</p>
+<blockquote>
+<p>与以太坊中的Token概念不同，以太坊中的Token只是智能合约内部记录的一个符号，而ETH才是以太坊内部真正运行的Token资产。</p>
+</blockquote>
+<h4 id="币名">
+  <strong>币名</strong>
+  <a class="anchor" href="#%e5%b8%81%e5%90%8d">#</a>
+</h4>
+<p>每种Token都有一个币名，ZORRO系统初始化后，默认只有一个被注册的币名<code>ZORRO</code>。在智能合约发行匿名Token的时候，必须向ZORRO系统注册一个全局唯一的字符串作为该Token的币名。币名可以极大的提高你发行资产的可读性。</p>
+<h4 id="匿名token资产">
+  <strong>匿名Token资产</strong>
+  <a class="anchor" href="#%e5%8c%bf%e5%90%8dtoken%e8%b5%84%e4%ba%a7">#</a>
+</h4>
+<p><img src="http://sero-media.s3-website-ap-southeast-1.amazonaws.com/images/201904/277023-dad514ff5a2f031e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png" /></p>
+<p>ZORRO的智能合约有一个非常强大的功能，那就是可以任意发行<code>匿名Token</code>。当然，前提是你需要一个从未注册过的币名。一旦匿名Token发行成功，智能合约可以将Token以普通交易的形式发送到某个普通账户的暂存地址<code>PKr</code>，这时这些被发送的Token将以UTXO的形式脱离智能合约账户，并且与ZORRO币一样，进入用户的个人账户中，从而被ZORRO的隐私机制所保护。</p>
+<blockquote>
+<p>ZORRO币的发行是由矿工实现的，过程与智能合约发行匿名Token的机制类似，是ZORRO内建的Token发行功能。</p>
+</blockquote>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#一utxo和account"><strong>一、UTXO和ACCOUNT</strong></a>
+      <ul>
+        <li><a href="#基于utxo的交易"><strong>基于UTXO的交易</strong></a></li>
+        <li><a href="#基于account的交易"><strong>基于ACCOUNT的交易</strong></a></li>
+        <li><a href="#zorro的混合模式"><strong>ZORRO的混合模式</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#二匿名交易结构"><strong>二、匿名交易结构</strong></a>
+      <ul>
+        <li><a href="#交易-tx"><strong>交易 <code>Tx</code></strong></a></li>
+        <li><a href="#输入-z-ins"><strong>输入 <code>Z ins</code></strong></a></li>
+        <li><a href="#两种不同的输出-outs"><strong>两种不同的输出 <code>outs</code></strong></a></li>
+        <li><a href="#输入和输出的平衡-balance"><strong>输入和输出的平衡 <code>Balance</code></strong></a></li>
+        <li><a href="#交易发送者-from"><strong>交易发送者 <code>From</code></strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#三发行匿名token的原理"><strong>三、发行匿名Token的原理</strong></a>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+ 
+    </aside>
+    
+  </main>
+
+  
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

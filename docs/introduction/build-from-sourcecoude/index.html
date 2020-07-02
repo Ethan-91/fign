@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en" dir=>
+
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="从源码编译开始# 本机环境#ubuntu16.04 / go1.13.11
+1. 安装依赖库，获取源码# apt-get install -y build-essential apt-get install libboost-all-dev apt-get install libgmp-dev go env -w GO111MODULE=off cd $GOPATH/src/github.com mkdir ZorroChain cd ZorroChain git clone https://github.com/ZorroChain/zorro.git 2. 设置动态库加载路径#  windows  # cmd: set path=%path%;%gopath%\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64 # powershell: $env:path=$env:path&#43;&#34;;&#34;&#43;$env:gopath&#43;&#34;\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64&#34;  mac  export DYLD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_DARWIN_AMD64  linux  # Linux内核版本v3: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V3 # Linux内核版本v4: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V4 3. 编译# cd zorro go install .">
+<meta name="theme-color" content="#FFFFFF"><meta property="og:title" content="源码编译" />
+<meta property="og:description" content="从源码编译开始# 本机环境#ubuntu16.04 / go1.13.11
+1. 安装依赖库，获取源码# apt-get install -y build-essential apt-get install libboost-all-dev apt-get install libgmp-dev go env -w GO111MODULE=off cd $GOPATH/src/github.com mkdir ZorroChain cd ZorroChain git clone https://github.com/ZorroChain/zorro.git 2. 设置动态库加载路径#  windows  # cmd: set path=%path%;%gopath%\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64 # powershell: $env:path=$env:path&#43;&#34;;&#34;&#43;$env:gopath&#43;&#34;\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64&#34;  mac  export DYLD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_DARWIN_AMD64  linux  # Linux内核版本v3: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V3 # Linux内核版本v4: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V4 3. 编译# cd zorro go install ." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://Ethan-91.github.com/docs/introduction/build-from-sourcecoude/" />
+
+<title>源码编译 | ZORRO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.b3215d9d1d18d9051e7fbe8f256ff80e30f41d29073b86348e230d297b771002.css" integrity="sha256-syFdnR0Y2QUef76PJW/4DjD0HSkHO4Y0jiMNKXt3EAI=">
+<script defer src="/en.search.min.022645c8e8e1021cc95951c67f07e20a34849535ba3f4d6f6cd92dad13d673e0.js" integrity="sha256-AiZFyOjhAhzJWVHGfwfiCjSElTW6P01vbNktrRPWc&#43;A="></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+  
+</head>
+
+<body dir=>
+  <input type="checkbox" class="hidden" id="menu-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      
+  <nav>
+<h2 class="book-brand">
+  <a href="/"><span>ZORRO</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>轻松入门</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/build-from-sourcecoude/" class="active">源码编译</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/operate-in-console/" class="">控制台操作</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>教程</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/service-interface/" class="">NODE对接(SI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/exchange-interface/" class="">WALLET对接(EI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/flight-interface/" class="">Flight接口说明</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/principle-of-anonymous-token/" class="">匿名Token发行原理</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/how-to-staking-using-gero/" class="">如何在ZORRO上进行Staking</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>源码编译</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+    <input type="checkbox" class="hidden" id="toc-control" />
+    <aside class="hidden clearfix">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#本机环境"><strong>本机环境</strong></a></li>
+    <li><a href="#1-安装依赖库获取源码"><strong>1. 安装依赖库，获取源码</strong></a></li>
+    <li><a href="#2-设置动态库加载路径"><strong>2. 设置动态库加载路径</strong></a></li>
+    <li><a href="#3-编译"><strong>3. 编译</strong></a></li>
+    <li><a href="#4-启动节点"><strong>4. 启动节点</strong></a></li>
+  </ul>
+</nav>
+
+
+    </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><h1 id="从源码编译开始">
+  <strong>从源码编译开始</strong>
+  <a class="anchor" href="#%e4%bb%8e%e6%ba%90%e7%a0%81%e7%bc%96%e8%af%91%e5%bc%80%e5%a7%8b">#</a>
+</h1>
+<hr>
+<h2 id="本机环境">
+  <strong>本机环境</strong>
+  <a class="anchor" href="#%e6%9c%ac%e6%9c%ba%e7%8e%af%e5%a2%83">#</a>
+</h2>
+<p>ubuntu16.04 / go1.13.11</p>
+<h2 id="1-安装依赖库获取源码">
+  <strong>1. 安装依赖库，获取源码</strong>
+  <a class="anchor" href="#1-%e5%ae%89%e8%a3%85%e4%be%9d%e8%b5%96%e5%ba%93%e8%8e%b7%e5%8f%96%e6%ba%90%e7%a0%81">#</a>
+</h2>
+<hr>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch">apt-get install -y build-essential
+apt-get install libboost-all-dev
+apt-get install libgmp-dev
+go env -w GO111MODULE=off
+<span style="color:#66d9ef">cd</span> $GOPATH/src/github.com
+<span style="color:#66d9ef">mkdir</span> ZorroChain
+<span style="color:#66d9ef">cd</span> ZorroChain
+git clone https://github.com/ZorroChain/zorro.git
+</code></pre></div><h2 id="2-设置动态库加载路径">
+  <strong>2. 设置动态库加载路径</strong>
+  <a class="anchor" href="#2-%e8%ae%be%e7%bd%ae%e5%8a%a8%e6%80%81%e5%ba%93%e5%8a%a0%e8%bd%bd%e8%b7%af%e5%be%84">#</a>
+</h2>
+<hr>
+<ul>
+<li><strong>windows</strong></li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#75715e"># cmd:</span>
+set path<span style="color:#f92672">=</span>%path%;%gopath%<span style="color:#ae81ff">\s</span>rc<span style="color:#ae81ff">\g</span>ithub.com<span style="color:#ae81ff">\Z</span>orroChain<span style="color:#ae81ff">\z</span>orro<span style="color:#ae81ff">\c</span>zk<span style="color:#ae81ff">\c</span>zero<span style="color:#ae81ff">\l</span>ib_WINDOWS_AMD64
+
+<span style="color:#75715e"># powershell:</span>  
+$env:path<span style="color:#f92672">=</span>$env:path+<span style="color:#e6db74">&#34;;&#34;</span>+$env:gopath+<span style="color:#e6db74">&#34;\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64&#34;</span>
+</code></pre></div><ul>
+<li><strong>mac</strong></li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch">export DYLD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_DARWIN_AMD64
+</code></pre></div><ul>
+<li><strong>linux</strong></li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch"># Linux内核版本v3:
+export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V3
+
+# Linux内核版本v4:
+export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V4
+</code></pre></div><h2 id="3-编译">
+  <strong>3. 编译</strong>
+  <a class="anchor" href="#3-%e7%bc%96%e8%af%91">#</a>
+</h2>
+<hr>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">cd zorro
+go install . ./cmd/...
+</code></pre></div><p>生成的执行文件位于<code>$GOPATH/bin</code>中</p>
+<h2 id="4-启动节点">
+  <strong>4. 启动节点</strong>
+  <a class="anchor" href="#4-%e5%90%af%e5%8a%a8%e8%8a%82%e7%82%b9">#</a>
+</h2>
+<hr>
+<ul>
+<li><strong>window</strong></li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch">zro.exe   --exchange --mineMode --stake --rpc --rpcaddr=<span style="color:#e6db74">&#34;0.0.0.0&#34;</span>   --dashboard --vmodule=dashboard=5 --rpcvhosts=<span style="color:#e6db74">&#34;*&#34;</span> --rpccorsdomain=<span style="color:#e6db74">&#34;*&#34;</span> --rpcapi=<span style="color:#e6db74">&#34;exchange,zorro,net,stake&#34;</span> --exchangeValueStr
+
+zro.exe  attach ipc:\\.\pipe\zro.ipc
+</code></pre></div><ul>
+<li><strong>mac</strong></li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch">zro  --exchange --mineMode --stake --rpc --rpcaddr=<span style="color:#e6db74">&#34;0.0.0.0&#34;</span>   --dashboard --vmodule=dashboard=5 --rpcvhosts=<span style="color:#e6db74">&#34;*&#34;</span> --rpccorsdomain=<span style="color:#e6db74">&#34;*&#34;</span> --rpcapi=<span style="color:#e6db74">&#34;exchange,zorro,net,stake&#34;</span> --exchangeValueStr
+
+zro attach --exchange
+</code></pre></div><ul>
+<li><strong>linux</strong></li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch">zro  --exchange --mineMode --stake --rpc --rpcaddr=<span style="color:#e6db74">&#34;0.0.0.0&#34;</span>   --dashboard --vmodule=dashboard=5 --rpcvhosts=<span style="color:#e6db74">&#34;*&#34;</span> --rpccorsdomain=<span style="color:#e6db74">&#34;*&#34;</span> --rpcapi=<span style="color:#e6db74">&#34;exchange,zorro,net,stake&#34;</span> --exchangeValueStr
+
+zro  attach
+</code></pre></div><p>zro attach启动一个JS虚拟机驱动的交互式控制台，或者也可以在第一个命令后直接加console。</p>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#本机环境"><strong>本机环境</strong></a></li>
+    <li><a href="#1-安装依赖库获取源码"><strong>1. 安装依赖库，获取源码</strong></a></li>
+    <li><a href="#2-设置动态库加载路径"><strong>2. 设置动态库加载路径</strong></a></li>
+    <li><a href="#3-编译"><strong>3. 编译</strong></a></li>
+    <li><a href="#4-启动节点"><strong>4. 启动节点</strong></a></li>
+  </ul>
+</nav>
+
+ 
+    </aside>
+    
+  </main>
+
+  
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en" dir=>
+
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Service Interface (SI) 接口说明# Zro上开放了SI服务，使得第三方可以通过rpc/web3连接Zro，获得无状态的公链服务。
+SI的使用方式是不维护第三方创建的公私钥，因此，第三方需要自己创建存储公私钥，并在需要的时候提供给SI。
+CreateKr# 创建公私钥对
+ Request   {&quot;id&quot;:0,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;ssi_createKr&quot;,&quot;params&quot;:null} Successful Response   {&quot;SKr&quot;:&quot;0x5bf7d....a0016&quot;, //私钥&quot;PKr&quot;:&quot;0x904bb....09baa&quot; //公钥} szkCreateKr 生成 SuperZK2.0 协议账户  GetBlocksInfo# 用来主动同步区块数据
+ Request   {&quot;id&quot;:0,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;ssi_getBlocksInfo&quot;,&quot;params&quot;:[&quot;0x0&quot;, //起始块&quot;0x5&quot; //最多获取多少个块]} Successful Response   [{&quot;Num&quot;:&quot;0x0&quot;, //块号&quot;Hash&quot;:&quot;0x2472...2003&quot; //Block Hash&quot;Outs&quot;:[{&quot;Hash&quot;:&quot;0x.">
+<meta name="theme-color" content="#FFFFFF"><meta property="og:title" content="NODE对接(SI接口说明)" />
+<meta property="og:description" content="Service Interface (SI) 接口说明# Zro上开放了SI服务，使得第三方可以通过rpc/web3连接Zro，获得无状态的公链服务。
+SI的使用方式是不维护第三方创建的公私钥，因此，第三方需要自己创建存储公私钥，并在需要的时候提供给SI。
+CreateKr# 创建公私钥对
+ Request   {&quot;id&quot;:0,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;ssi_createKr&quot;,&quot;params&quot;:null} Successful Response   {&quot;SKr&quot;:&quot;0x5bf7d....a0016&quot;, //私钥&quot;PKr&quot;:&quot;0x904bb....09baa&quot; //公钥} szkCreateKr 生成 SuperZK2.0 协议账户  GetBlocksInfo# 用来主动同步区块数据
+ Request   {&quot;id&quot;:0,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;ssi_getBlocksInfo&quot;,&quot;params&quot;:[&quot;0x0&quot;, //起始块&quot;0x5&quot; //最多获取多少个块]} Successful Response   [{&quot;Num&quot;:&quot;0x0&quot;, //块号&quot;Hash&quot;:&quot;0x2472...2003&quot; //Block Hash&quot;Outs&quot;:[{&quot;Hash&quot;:&quot;0x." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://Ethan-91.github.com/docs/course/service-interface/" />
+
+<title>NODE对接(SI接口说明) | ZORRO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.b3215d9d1d18d9051e7fbe8f256ff80e30f41d29073b86348e230d297b771002.css" integrity="sha256-syFdnR0Y2QUef76PJW/4DjD0HSkHO4Y0jiMNKXt3EAI=">
+<script defer src="/en.search.min.022645c8e8e1021cc95951c67f07e20a34849535ba3f4d6f6cd92dad13d673e0.js" integrity="sha256-AiZFyOjhAhzJWVHGfwfiCjSElTW6P01vbNktrRPWc&#43;A="></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+  
+</head>
+
+<body dir=>
+  <input type="checkbox" class="hidden" id="menu-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      
+  <nav>
+<h2 class="book-brand">
+  <a href="/"><span>ZORRO</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>轻松入门</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/build-from-sourcecoude/" class="">源码编译</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/operate-in-console/" class="">控制台操作</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>教程</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/service-interface/" class="active">NODE对接(SI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/exchange-interface/" class="">WALLET对接(EI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/flight-interface/" class="">Flight接口说明</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/principle-of-anonymous-token/" class="">匿名Token发行原理</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/how-to-staking-using-gero/" class="">如何在ZORRO上进行Staking</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>NODE对接(SI接口说明)</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+    <input type="checkbox" class="hidden" id="toc-control" />
+    <aside class="hidden clearfix">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#createkr"><strong>CreateKr</strong></a></li>
+    <li><a href="#getblocksinfo"><strong>GetBlocksInfo</strong></a></li>
+    <li><a href="#detail"><strong>Detail</strong></a></li>
+    <li><a href="#gentx"><strong>GenTx</strong></a></li>
+    <li><a href="#committx"><strong>CommitTx</strong></a></li>
+    <li><a href="#建议对接方案"><strong>建议对接方案</strong></a></li>
+  </ul>
+</nav>
+
+
+    </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><h1 id="service-interface-si-接口说明">
+  <strong>Service Interface (SI) 接口说明</strong>
+  <a class="anchor" href="#service-interface-si-%e6%8e%a5%e5%8f%a3%e8%af%b4%e6%98%8e">#</a>
+</h1>
+<hr>
+<p>Zro上开放了SI服务，使得第三方可以通过rpc/web3连接Zro，获得无状态的公链服务。</p>
+<p>SI的使用方式是不维护第三方创建的公私钥，因此，第三方需要自己创建存储公私钥，并在需要的时候提供给SI。</p>
+<h2 id="createkr">
+  <strong>CreateKr</strong>
+  <a class="anchor" href="#createkr">#</a>
+</h2>
+<hr>
+<p>创建公私钥对</p>
+<ul>
+<li>Request</li>
+</ul>
+<pre><code>  {&quot;id&quot;:0,&quot;jsonrpc&quot;:&quot;2.0&quot;,&quot;method&quot;:&quot;ssi_createKr&quot;,&quot;params&quot;:null}
+</code></pre><ul>
+<li>Successful Response</li>
+</ul>
+<pre><code>  {
+    &quot;SKr&quot;:&quot;0x5bf7d....a0016&quot;, //私钥
+    &quot;PKr&quot;:&quot;0x904bb....09baa&quot;  //公钥
+  }
+</code></pre><ul>
+<li>szkCreateKr 生成 <strong>SuperZK2.0</strong> 协议账户</li>
+</ul>
+<h2 id="getblocksinfo">
+  <strong>GetBlocksInfo</strong>
+  <a class="anchor" href="#getblocksinfo">#</a>
+</h2>
+<hr>
+<p>用来主动同步区块数据</p>
+<ul>
+<li>Request</li>
+</ul>
+<pre><code>  {
+    &quot;id&quot;:0,
+    &quot;jsonrpc&quot;:&quot;2.0&quot;,
+    &quot;method&quot;:&quot;ssi_getBlocksInfo&quot;,
+    &quot;params&quot;:[
+        &quot;0x0&quot;,                //起始块
+        &quot;0x5&quot;                 //最多获取多少个块
+    ]
+  }
+</code></pre><ul>
+<li>Successful Response</li>
+</ul>
+<pre><code>  [
+      {
+         &quot;Num&quot;:&quot;0x0&quot;,            //块号
+         &quot;Hash&quot;:&quot;0x2472...2003&quot;  //Block Hash
+         &quot;Outs&quot;:[
+             {
+             &quot;Hash&quot;:&quot;0x...&quot;              //Tx Hash
+             &quot;Root&quot;:&quot;0xfa2e8....5a717&quot;,  //该Out的Merkle Root
+             &quot;PKr&quot;: &quot;0xaf630....7ca29&quot;   //该Out的暂存公钥
+             }
+         ],
+         &quot;Nils&quot;:[&quot;0x...&quot;,...]    //作废码
+       },
+       ...
+  ]
+</code></pre><h2 id="detail">
+  <strong>Detail</strong>
+  <a class="anchor" href="#detail">#</a>
+</h2>
+<hr>
+<p>获取对应Out的明文信息</p>
+<ul>
+<li>Request</li>
+</ul>
+<pre><code>  {
+    &quot;id&quot;:1,
+    &quot;jsonrpc&quot;:&quot;2.0&quot;,
+    &quot;method&quot;:&quot;ssi_detail&quot;,
+    &quot;params&quot;:[
+        [&quot;0x...&quot;,&quot;0x...&quot;],  //需要解出明文的out的root列表，需要有相同的PKr。
+        &quot;0x...&quot;             //该Out的PKr对应的SKr
+    ]
+  }
+</code></pre><ul>
+<li>Successful Response</li>
+</ul>
+<pre><code>  {
+      &quot;id&quot;:1,
+      &quot;jsonrpc&quot;:&quot;2.0&quot;,
+      &quot;result&quot;:[
+          {
+              &quot;Asset&quot; :{                       //Out的资产
+                  &quot;Tkn&quot; :{                     //Token资产
+                      &quot;Currency&quot;:&quot;0x...&quot;,      //Token的币名
+                      &quot;Value&quot;:10000000        //Token的金额(bigint)
+                  },
+                  Tkt:{                     //Ticket资产
+                      &quot;Category&quot;:&quot;0x...&quot;,      //Ticket类型
+                      &quot;Value&quot;:&quot;0x...&quot;         //Ticket的值
+                  }
+              },
+              Memo:&quot;...&quot;,                   //本Out的备注
+              Nil:&quot;0x...&quot;                   //本Out的作废码
+          },
+          ...
+      ]
+  }
+</code></pre><h2 id="gentx">
+  <strong>GenTx</strong>
+  <a class="anchor" href="#gentx">#</a>
+</h2>
+<hr>
+<p>创建交易，需要发送方自己配平Out和In，注意In和Out的个数越多，交易生成的时间越长。</p>
+<ul>
+<li>Request</li>
+</ul>
+<pre><code>  {
+    &quot;id&quot;:1,
+    &quot;jsonrpc&quot;:&quot;2.0&quot;,
+    &quot;method&quot;:&quot;ssi_genTx&quot;,
+    &quot;params&quot;:[{
+        Gas: 10000,                       //本次交易的GasLimit
+        GasPrice: 1000000000,             //本次交易的GasPrice
+        From: {                           //代表发送者的Kr
+            SKr:&quot;0x...&quot;,
+            PKr:&quot;0x...&quot;
+        },                    
+        Ins: [
+            {
+               SKr: &quot;0x...&quot;,              //输入的UTXO对应的SKr
+               Root: &quot;0x...&quot;              //输入的UTXO对应的Root
+            },
+            ...
+        ],
+        Outs: [
+            {
+               PKr: &quot;0x...&quot;,              //输出的PKr
+               Asset: {...},              //输出的资产，参考Detail
+               Memo: &quot;0x.....&quot;            //本次输出的备注
+            },
+            ...
+        ]
+    }]
+  }
+</code></pre><ul>
+<li>Successful Response</li>
+</ul>
+<pre><code>  {
+      &quot;id&quot;:1,
+      &quot;jsonrpc&quot;:&quot;2.0&quot;,
+      &quot;result&quot;:&quot;0x...&quot;                   //该交易的hash
+  }
+</code></pre><p><strong>注意</strong> 
+* Zro会根据当前机器的性能决定并行计算的数量，交易生成时间与引用的UTXO的数量成正比。
+* 一个解决方案是对充值的UTXO进行merge，另外一个是延长接口调用的超时时间。
+* &ndash;rpcwritetimeout [SECOND] 启动Zro的时候加上这个参数，可以设置Zro回写的超时时间，单位是秒。</p>
+<h2 id="committx">
+  <strong>CommitTx</strong>
+  <a class="anchor" href="#committx">#</a>
+</h2>
+<hr>
+<p>提交已经创建的交易</p>
+<ul>
+<li>Request</li>
+</ul>
+<pre><code>  {
+    &quot;id&quot;:1,
+    &quot;jsonrpc&quot;:&quot;2.0&quot;,
+    &quot;method&quot;:&quot;ssi_commitTx&quot;,
+    &quot;params&quot;:[
+        &quot;0x...&quot;                        //之前genTx创建的交易的hash
+    ]
+  }
+</code></pre><ul>
+<li>Successful Response</li>
+</ul>
+<pre><code>  {
+      &quot;id&quot;:1,
+      &quot;jsonrpc&quot;:&quot;2.0&quot;,
+      &quot;result&quot;:null
+  }
+</code></pre><h2 id="建议对接方案">
+  <strong>建议对接方案</strong>
+  <a class="anchor" href="#%e5%bb%ba%e8%ae%ae%e5%af%b9%e6%8e%a5%e6%96%b9%e6%a1%88">#</a>
+</h2>
+<hr>
+<ol>
+<li>用户创建
+<ol>
+<li>为每个用户创建不同的Kr并存储在数据库中</li>
+</ol>
+</li>
+<li>充值：
+<ol>
+<li>不断的调用GetBlocksInfo获取最新的区块信息</li>
+<li>查找区块的Out中的PKr是否为自己创建，如果是，就调用Detail解出Out的明文信息以及对应的作废码Nil。</li>
+<li>查找区块中的Nil是否在Detail的时候解出过，如果找到，说明对应的UTXO已经被用掉了。</li>
+</ol>
+</li>
+<li>提现
+<ol>
+<li>获取已经存在的UTXO作为In，并构造出Out，配平后调用GenTx签名生成Tx。</li>
+<li>调用CommitTx提交该Tx。</li>
+</ol>
+</li>
+</ol>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#createkr"><strong>CreateKr</strong></a></li>
+    <li><a href="#getblocksinfo"><strong>GetBlocksInfo</strong></a></li>
+    <li><a href="#detail"><strong>Detail</strong></a></li>
+    <li><a href="#gentx"><strong>GenTx</strong></a></li>
+    <li><a href="#committx"><strong>CommitTx</strong></a></li>
+    <li><a href="#建议对接方案"><strong>建议对接方案</strong></a></li>
+  </ul>
+</nav>
+
+ 
+    </aside>
+    
+  </main>
+
+  
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

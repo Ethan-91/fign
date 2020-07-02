@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en" dir=>
+
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="控制台基础操作# 本机环境#ubuntu16.04 / go1.13.11
+1. 启动控制台# zro --exchange --mineMode --stake --rpc --rpcaddr=&#34;0.0.0.0&#34; --dashboard --vmodule=dashboard=5 --rpcvhosts=&#34;*&#34; --rpccorsdomain=&#34;*&#34; --rpcapi=&#34;exchange,zorro,net,stake&#34; --exchangeValueStr zro attach 2. 账户管理# 创建账户指令#&gt; personal.newAccount(&#34;[PASSWORD]&#34;) ... &#34;[PK]&#34; 其中 [PASSWORD] 是这个账户的密码，因为Zro不会直接存储用户的私钥，当5分钟没有任何操作，账户会被锁定，这时要用该账户进行转账，则需要用此密码对账户解锁。创建用户指令会返回该用户公钥。这个公钥可以作为转账地址。
+查看所有公钥#&gt; zorro.accounts ... [&#34;[PK0]&#34;,&#34;[PK1]&#34;,...,&#34;[PKn]&#34;] 这个属性返回当前钱包中所有账户的公钥。
+解锁账户#&gt; personal.unlockAccount(&#34;[PK]&#34;,&#34;[PASSWORD]&#34;) 其中[PK]是该用户公钥
+获取账户资产余额#&gt; zorro.getBalance(&#34;[PK]&#34;) ... {tkn:{...},tkt:{...}} 其中tkn按分类显示账户所有Token余额，tkt按分类显示账户所有持有的Ticket。
+3. 挖矿# 启动挖矿#&gt; miner.">
+<meta name="theme-color" content="#FFFFFF"><meta property="og:title" content="控制台操作" />
+<meta property="og:description" content="控制台基础操作# 本机环境#ubuntu16.04 / go1.13.11
+1. 启动控制台# zro --exchange --mineMode --stake --rpc --rpcaddr=&#34;0.0.0.0&#34; --dashboard --vmodule=dashboard=5 --rpcvhosts=&#34;*&#34; --rpccorsdomain=&#34;*&#34; --rpcapi=&#34;exchange,zorro,net,stake&#34; --exchangeValueStr zro attach 2. 账户管理# 创建账户指令#&gt; personal.newAccount(&#34;[PASSWORD]&#34;) ... &#34;[PK]&#34; 其中 [PASSWORD] 是这个账户的密码，因为Zro不会直接存储用户的私钥，当5分钟没有任何操作，账户会被锁定，这时要用该账户进行转账，则需要用此密码对账户解锁。创建用户指令会返回该用户公钥。这个公钥可以作为转账地址。
+查看所有公钥#&gt; zorro.accounts ... [&#34;[PK0]&#34;,&#34;[PK1]&#34;,...,&#34;[PKn]&#34;] 这个属性返回当前钱包中所有账户的公钥。
+解锁账户#&gt; personal.unlockAccount(&#34;[PK]&#34;,&#34;[PASSWORD]&#34;) 其中[PK]是该用户公钥
+获取账户资产余额#&gt; zorro.getBalance(&#34;[PK]&#34;) ... {tkn:{...},tkt:{...}} 其中tkn按分类显示账户所有Token余额，tkt按分类显示账户所有持有的Ticket。
+3. 挖矿# 启动挖矿#&gt; miner." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://Ethan-91.github.com/docs/introduction/operate-in-console/" />
+
+<title>控制台操作 | ZORRO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.b3215d9d1d18d9051e7fbe8f256ff80e30f41d29073b86348e230d297b771002.css" integrity="sha256-syFdnR0Y2QUef76PJW/4DjD0HSkHO4Y0jiMNKXt3EAI=">
+<script defer src="/en.search.min.022645c8e8e1021cc95951c67f07e20a34849535ba3f4d6f6cd92dad13d673e0.js" integrity="sha256-AiZFyOjhAhzJWVHGfwfiCjSElTW6P01vbNktrRPWc&#43;A="></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+  
+</head>
+
+<body dir=>
+  <input type="checkbox" class="hidden" id="menu-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      
+  <nav>
+<h2 class="book-brand">
+  <a href="/"><span>ZORRO</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>轻松入门</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/build-from-sourcecoude/" class="">源码编译</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/operate-in-console/" class="active">控制台操作</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>教程</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/service-interface/" class="">NODE对接(SI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/exchange-interface/" class="">WALLET对接(EI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/flight-interface/" class="">Flight接口说明</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/principle-of-anonymous-token/" class="">匿名Token发行原理</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/how-to-staking-using-gero/" class="">如何在ZORRO上进行Staking</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>控制台操作</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+    <input type="checkbox" class="hidden" id="toc-control" />
+    <aside class="hidden clearfix">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#本机环境"><strong>本机环境</strong></a></li>
+    <li><a href="#1-启动控制台"><strong>1. 启动控制台</strong></a></li>
+    <li><a href="#2-账户管理"><strong>2. 账户管理</strong></a>
+      <ul>
+        <li><a href="#创建账户指令"><strong>创建账户指令</strong></a></li>
+        <li><a href="#查看所有公钥"><strong>查看所有公钥</strong></a></li>
+        <li><a href="#解锁账户"><strong>解锁账户</strong></a></li>
+        <li><a href="#获取账户资产余额"><strong>获取账户资产余额</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#3-挖矿"><strong>3. 挖矿</strong></a>
+      <ul>
+        <li><a href="#启动挖矿"><strong>启动挖矿</strong></a></li>
+        <li><a href="#停止挖矿"><strong>停止挖矿</strong></a></li>
+        <li><a href="#控制台休眠"><strong>控制台休眠</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#4-生成交易"><strong>4. 生成交易</strong></a>
+      <ul>
+        <li><a href="#转账指令"><strong>转账指令</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#5-获取交易详情"><strong>5. 获取交易详情</strong></a></li>
+  </ul>
+</nav>
+
+
+    </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><h1 id="控制台基础操作">
+  <strong>控制台基础操作</strong>
+  <a class="anchor" href="#%e6%8e%a7%e5%88%b6%e5%8f%b0%e5%9f%ba%e7%a1%80%e6%93%8d%e4%bd%9c">#</a>
+</h1>
+<hr>
+<h2 id="本机环境">
+  <strong>本机环境</strong>
+  <a class="anchor" href="#%e6%9c%ac%e6%9c%ba%e7%8e%af%e5%a2%83">#</a>
+</h2>
+<p>ubuntu16.04 / go1.13.11</p>
+<h2 id="1-启动控制台">
+  <strong>1. 启动控制台</strong>
+  <a class="anchor" href="#1-%e5%90%af%e5%8a%a8%e6%8e%a7%e5%88%b6%e5%8f%b0">#</a>
+</h2>
+<hr>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch">zro  --exchange --mineMode --stake --rpc --rpcaddr=<span style="color:#e6db74">&#34;0.0.0.0&#34;</span>   --dashboard --vmodule=dashboard=5 --rpcvhosts=<span style="color:#e6db74">&#34;*&#34;</span> --rpccorsdomain=<span style="color:#e6db74">&#34;*&#34;</span> --rpcapi=<span style="color:#e6db74">&#34;exchange,zorro,net,stake&#34;</span> --exchangeValueStr
+
+zro  attach
+</code></pre></div><h2 id="2-账户管理">
+  <strong>2. 账户管理</strong>
+  <a class="anchor" href="#2-%e8%b4%a6%e6%88%b7%e7%ae%a1%e7%90%86">#</a>
+</h2>
+<hr>
+<h3 id="创建账户指令">
+  <strong>创建账户指令</strong>
+  <a class="anchor" href="#%e5%88%9b%e5%bb%ba%e8%b4%a6%e6%88%b7%e6%8c%87%e4%bb%a4">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-batch" data-lang="batch">&gt; personal.newAccount(<span style="color:#e6db74">&#34;[PASSWORD]&#34;</span>)
+... <span style="color:#e6db74">&#34;[PK]&#34;</span>
+</code></pre></div><p>其中 [PASSWORD] 是这个账户的密码，因为Zro不会直接存储用户的私钥，当5分钟没有任何操作，账户会被锁定，这时要用该账户进行转账，则需要用此密码对账户解锁。创建用户指令会返回该用户公钥。这个公钥可以作为转账地址。</p>
+<h3 id="查看所有公钥">
+  <strong>查看所有公钥</strong>
+  <a class="anchor" href="#%e6%9f%a5%e7%9c%8b%e6%89%80%e6%9c%89%e5%85%ac%e9%92%a5">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">&gt; zorro.accounts
+... <span style="color:#f92672">[</span><span style="color:#e6db74">&#34;[PK0]&#34;</span>,<span style="color:#e6db74">&#34;[PK1]&#34;</span>,...,<span style="color:#e6db74">&#34;[PKn]&#34;</span><span style="color:#f92672">]</span>
+</code></pre></div><p>这个属性返回当前钱包中所有账户的公钥。</p>
+<h3 id="解锁账户">
+  <strong>解锁账户</strong>
+  <a class="anchor" href="#%e8%a7%a3%e9%94%81%e8%b4%a6%e6%88%b7">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">&gt; personal.unlockAccount<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;[PK]&#34;</span>,<span style="color:#e6db74">&#34;[PASSWORD]&#34;</span><span style="color:#f92672">)</span>
+</code></pre></div><p>其中[PK]是该用户公钥</p>
+<h3 id="获取账户资产余额">
+  <strong>获取账户资产余额</strong>
+  <a class="anchor" href="#%e8%8e%b7%e5%8f%96%e8%b4%a6%e6%88%b7%e8%b5%84%e4%ba%a7%e4%bd%99%e9%a2%9d">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">&gt; zorro.getBalance<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;[PK]&#34;</span><span style="color:#f92672">)</span>
+... <span style="color:#f92672">{</span>tkn:<span style="color:#f92672">{</span>...<span style="color:#f92672">}</span>,tkt:<span style="color:#f92672">{</span>...<span style="color:#f92672">}}</span>
+</code></pre></div><p>其中tkn按分类显示账户所有Token余额，tkt按分类显示账户所有持有的Ticket。</p>
+<h2 id="3-挖矿">
+  <strong>3. 挖矿</strong>
+  <a class="anchor" href="#3-%e6%8c%96%e7%9f%bf">#</a>
+</h2>
+<hr>
+<h3 id="启动挖矿">
+  <strong>启动挖矿</strong>
+  <a class="anchor" href="#%e5%90%af%e5%8a%a8%e6%8c%96%e7%9f%bf">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">&gt; miner.start<span style="color:#f92672">()</span>
+</code></pre></div><h3 id="停止挖矿">
+  <strong>停止挖矿</strong>
+  <a class="anchor" href="#%e5%81%9c%e6%ad%a2%e6%8c%96%e7%9f%bf">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">&gt; miner.stop<span style="color:#f92672">()</span>
+</code></pre></div><h3 id="控制台休眠">
+  <strong>控制台休眠</strong>
+  <a class="anchor" href="#%e6%8e%a7%e5%88%b6%e5%8f%b0%e4%bc%91%e7%9c%a0">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">&gt; admin.sleepBlocks<span style="color:#f92672">(</span>num<span style="color:#f92672">)</span>
+</code></pre></div><p>参数<code>num</code>是需要休眠的区块数，这个方法一定要在挖矿开启的情况下调用，否则将一直阻塞系统。
+需要说明的是，挖矿所获得的奖励，默认条件下，会进入zorro.accounts的第0个账户的公钥生成的暂存地址(PKr) 中。</p>
+<h2 id="4-生成交易">
+  <strong>4. 生成交易</strong>
+  <a class="anchor" href="#4-%e7%94%9f%e6%88%90%e4%ba%a4%e6%98%93">#</a>
+</h2>
+<hr>
+<p>当<code>accounts[0]</code>中已经有挖矿所得的奖励的时候，既可以转账给其他账户。</p>
+<h3 id="转账指令">
+  <strong>转账指令</strong>
+  <a class="anchor" href="#%e8%bd%ac%e8%b4%a6%e6%8c%87%e4%bb%a4">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">zorro.sendTransaction<span style="color:#f92672">({</span>
+  from:<span style="color:#e6db74">&#34;[SRC_PK]&#34;</span>,
+  to:<span style="color:#e6db74">&#34;[TARGET_PK]&#34;</span>,
+  value:<span style="color:#f92672">[</span>NUM_OF_TA<span style="color:#f92672">]</span>
+<span style="color:#f92672">})</span>
+... <span style="color:#e6db74">&#34;[TX_ID]&#34;</span>
+</code></pre></div><p>其中<code>[SRC_PK]</code>是资金发出方公钥，<code>[TARGET_PK]</code>是资金接受方公钥，<code>[NUM_OF_TA]</code>是最小单位的金额，zorro的最小单位是TA，换算单位是 1 zorro = 10^18 TA。返回值<code>[TX_ID]</code>是生成交易的ID。</p>
+<p>交易生成之后，将同步给当前网络的其他节点，等待打包进区块中。在打包进区块之后，可以用下面的指令查询交易的详情。</p>
+<h2 id="5-获取交易详情">
+  <strong>5. 获取交易详情</strong>
+  <a class="anchor" href="#5-%e8%8e%b7%e5%8f%96%e4%ba%a4%e6%98%93%e8%af%a6%e6%83%85">#</a>
+</h2>
+<hr>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">&gt; zorro.getTransaction<span style="color:#f92672">(</span><span style="color:#e6db74">&#34;[TX_ID]&#34;</span><span style="color:#f92672">)</span>
+...<span style="color:#f92672">[</span>TX_DETAIL<span style="color:#f92672">]</span>
+</code></pre></div><p>其中[TX_DETAIL]主要格式于下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash"><span style="color:#f92672">{</span>
+  from: <span style="color:#e6db74">&#34;[SENDER PKr]&#34;</span>,
+  stx: <span style="color:#f92672">{</span>
+    Desc_Z_Ins: <span style="color:#f92672">[{</span>
+        Anchor: <span style="color:#e6db74">&#34;[MERKLE AUTH ROOT]&#34;</span>,
+        AssetCM: <span style="color:#e6db74">&#34;[ASSET COMMITMENT]&#34;</span>,
+        Nil: <span style="color:#e6db74">&#34;[NULLIFIER ID]&#34;</span>,
+        Trace: <span style="color:#e6db74">&#34;[TRACE ID]&#34;</span>
+        Proof: <span style="color:#e6db74">&#34;[ZKP PROOF]&#34;</span>
+    <span style="color:#f92672">}]</span>,
+    Desc_Z_Outs: <span style="color:#f92672">[{</span>
+        AssetCM: <span style="color:#e6db74">&#34;[ASSET COMMITMENT]&#34;</span>,
+        OutCM: <span style="color:#e6db74">&#34;[OUTPUT COMMITMENT]&#34;</span>,
+        PKr: <span style="color:#e6db74">&#34;[RECIVER PKr]&#34;</span>,
+        Proof: <span style="color:#e6db74">&#34;[ZKP PROOF]&#34;</span>
+    <span style="color:#f92672">}]</span>,
+
+  <span style="color:#f92672">}</span>
+<span style="color:#f92672">}</span>
+</code></pre></div></article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#本机环境"><strong>本机环境</strong></a></li>
+    <li><a href="#1-启动控制台"><strong>1. 启动控制台</strong></a></li>
+    <li><a href="#2-账户管理"><strong>2. 账户管理</strong></a>
+      <ul>
+        <li><a href="#创建账户指令"><strong>创建账户指令</strong></a></li>
+        <li><a href="#查看所有公钥"><strong>查看所有公钥</strong></a></li>
+        <li><a href="#解锁账户"><strong>解锁账户</strong></a></li>
+        <li><a href="#获取账户资产余额"><strong>获取账户资产余额</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#3-挖矿"><strong>3. 挖矿</strong></a>
+      <ul>
+        <li><a href="#启动挖矿"><strong>启动挖矿</strong></a></li>
+        <li><a href="#停止挖矿"><strong>停止挖矿</strong></a></li>
+        <li><a href="#控制台休眠"><strong>控制台休眠</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#4-生成交易"><strong>4. 生成交易</strong></a>
+      <ul>
+        <li><a href="#转账指令"><strong>转账指令</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#5-获取交易详情"><strong>5. 获取交易详情</strong></a></li>
+  </ul>
+</nav>
+
+ 
+    </aside>
+    
+  </main>
+
+  
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

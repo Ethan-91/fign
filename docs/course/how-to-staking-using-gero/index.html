@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en" dir=>
+
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="如何在ZORRO上进行Staking#  本文主要为全节点后台程序使用者提供，界面钱包的使用者请静待后续说明文档。
+Staking 功能需要在 117600的高度之后才生效
+ 进行Staking需要开启ZORRO的exchange服务，启动时可以加入--exchange --mineMode两个参数：
+./zro --exchange --mineMode --datadir ~/datadir 注意：加入这两个参数后，会对账户余额重新分析，将有一段时间（几个小时）无法看到正确的余额。
+如果需要通过jsonrpc接口调用staking的命令，可以通过加入—rpcapi stake参数开启。开启后jsonrpc的方法名可以跟其他的形式一致，比如stake.buyShare的方法名是stake_buyShare。
+Staking 过程简要描述#  POS 矿工可以在股份池里面购买投票的股份  股份设有股份池，无上限。 股份的价格根据股份池大小动态调整。 股份池大小 326592 以内股份价格的变化比较平衡。 股份池大小超过 326592 后股份价格急剧上升。   POW 矿工计算出区块 HASH 之后，将随机在股份池中选择 3 个股份，并广播选票信息。 POS 矿工收到属于自己的选票信息之后，立即广播自己签名后的投票信息。 POW 矿工在收到 POS 矿工的投票信息之后，将签名放入区块头部信息中。 如果正确的投票超过 2 个，POW 矿工将广播区块，完成出块过程。 POS 矿工可以选择 SOLO 投票或 StakingNode 代投票。 每个区块奖励分为 POW 奖励和 POS 奖励  POW 奖励和 POS 奖励的比例为 4 : 4 POW 奖励和 POS 奖励的大小随各自难度独立变化。   POS 奖励分为 Solo 投票和 StakingNode 代投票两种情况  Solo 奖励和代投票奖励的比例为 3 : 4   完成投票过程后，所涉及的奖励和本金会在最近的一个支付周期（大约1周）内退回。  Share 的生命周期#  用户选择一定的价格购买股份后，本金即进入锁定状态**(Lock)**，股份进入当前的股份池中 **(InPool)**。 POW矿工在出块时随机选择3份股份，被选中的股份进入待投票状态 (Lottery)  至少获得两个投票才能完成出块过程。   POS矿工在接收到待投票消息后，成功将投票信息广播给POW矿工完成出块，股份进入完成状态**(Votted)**  进入完成状态的股份会在一个支付周期(一周)内归还本金和奖励，同时释放股份。   当区块只有两份成功投票的情况下，另外一份股份则进入错失状态**(Missed)**。  作为惩罚，进入错失状态的股份将会在连续锁定3个月后释放本金。   在股份池中没有被成功选中的股份一个月后过期**(Expire)**  过期时会释放本金。    StakingNode的生命周期#  运营者通过锁定20万ZORRO币可以获得运营StakingNode 的权利。 StakingNode在运营一个月后，才能通过手工关闭，进入关闭状态 (Close)  关闭之后将不允许新的股份代投申请。 同时运营者有义务完成现在StakingNode中已有的股份。   StakingNode在同时满足下面两个条件下将归还本金进入结束状态**(Finish)**：  所有代投股份本金全部释放 进入关闭状态    SOLO Staking# 你拥有一个全节点程序(ZORRO)，并且拥有一定数量的 ZORRO 代币，既可进行SOLO，获取POS奖励部分比例为 3 的奖励。">
+<meta name="theme-color" content="#FFFFFF"><meta property="og:title" content="如何在ZORRO上进行Staking" />
+<meta property="og:description" content="如何在ZORRO上进行Staking#  本文主要为全节点后台程序使用者提供，界面钱包的使用者请静待后续说明文档。
+Staking 功能需要在 117600的高度之后才生效
+ 进行Staking需要开启ZORRO的exchange服务，启动时可以加入--exchange --mineMode两个参数：
+./zro --exchange --mineMode --datadir ~/datadir 注意：加入这两个参数后，会对账户余额重新分析，将有一段时间（几个小时）无法看到正确的余额。
+如果需要通过jsonrpc接口调用staking的命令，可以通过加入—rpcapi stake参数开启。开启后jsonrpc的方法名可以跟其他的形式一致，比如stake.buyShare的方法名是stake_buyShare。
+Staking 过程简要描述#  POS 矿工可以在股份池里面购买投票的股份  股份设有股份池，无上限。 股份的价格根据股份池大小动态调整。 股份池大小 326592 以内股份价格的变化比较平衡。 股份池大小超过 326592 后股份价格急剧上升。   POW 矿工计算出区块 HASH 之后，将随机在股份池中选择 3 个股份，并广播选票信息。 POS 矿工收到属于自己的选票信息之后，立即广播自己签名后的投票信息。 POW 矿工在收到 POS 矿工的投票信息之后，将签名放入区块头部信息中。 如果正确的投票超过 2 个，POW 矿工将广播区块，完成出块过程。 POS 矿工可以选择 SOLO 投票或 StakingNode 代投票。 每个区块奖励分为 POW 奖励和 POS 奖励  POW 奖励和 POS 奖励的比例为 4 : 4 POW 奖励和 POS 奖励的大小随各自难度独立变化。   POS 奖励分为 Solo 投票和 StakingNode 代投票两种情况  Solo 奖励和代投票奖励的比例为 3 : 4   完成投票过程后，所涉及的奖励和本金会在最近的一个支付周期（大约1周）内退回。  Share 的生命周期#  用户选择一定的价格购买股份后，本金即进入锁定状态**(Lock)**，股份进入当前的股份池中 **(InPool)**。 POW矿工在出块时随机选择3份股份，被选中的股份进入待投票状态 (Lottery)  至少获得两个投票才能完成出块过程。   POS矿工在接收到待投票消息后，成功将投票信息广播给POW矿工完成出块，股份进入完成状态**(Votted)**  进入完成状态的股份会在一个支付周期(一周)内归还本金和奖励，同时释放股份。   当区块只有两份成功投票的情况下，另外一份股份则进入错失状态**(Missed)**。  作为惩罚，进入错失状态的股份将会在连续锁定3个月后释放本金。   在股份池中没有被成功选中的股份一个月后过期**(Expire)**  过期时会释放本金。    StakingNode的生命周期#  运营者通过锁定20万ZORRO币可以获得运营StakingNode 的权利。 StakingNode在运营一个月后，才能通过手工关闭，进入关闭状态 (Close)  关闭之后将不允许新的股份代投申请。 同时运营者有义务完成现在StakingNode中已有的股份。   StakingNode在同时满足下面两个条件下将归还本金进入结束状态**(Finish)**：  所有代投股份本金全部释放 进入关闭状态    SOLO Staking# 你拥有一个全节点程序(ZORRO)，并且拥有一定数量的 ZORRO 代币，既可进行SOLO，获取POS奖励部分比例为 3 的奖励。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://Ethan-91.github.com/docs/course/how-to-staking-using-gero/" />
+
+<title>如何在ZORRO上进行Staking | ZORRO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.b3215d9d1d18d9051e7fbe8f256ff80e30f41d29073b86348e230d297b771002.css" integrity="sha256-syFdnR0Y2QUef76PJW/4DjD0HSkHO4Y0jiMNKXt3EAI=">
+<script defer src="/en.search.min.022645c8e8e1021cc95951c67f07e20a34849535ba3f4d6f6cd92dad13d673e0.js" integrity="sha256-AiZFyOjhAhzJWVHGfwfiCjSElTW6P01vbNktrRPWc&#43;A="></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+  
+</head>
+
+<body dir=>
+  <input type="checkbox" class="hidden" id="menu-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      
+  <nav>
+<h2 class="book-brand">
+  <a href="/"><span>ZORRO</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>轻松入门</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/build-from-sourcecoude/" class="">源码编译</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/operate-in-console/" class="">控制台操作</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>教程</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/service-interface/" class="">NODE对接(SI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/exchange-interface/" class="">WALLET对接(EI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/flight-interface/" class="">Flight接口说明</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/principle-of-anonymous-token/" class="">匿名Token发行原理</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/how-to-staking-using-gero/" class="active">如何在ZORRO上进行Staking</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>如何在ZORRO上进行Staking</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+    <input type="checkbox" class="hidden" id="toc-control" />
+    <aside class="hidden clearfix">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#staking-过程简要描述"><strong>Staking 过程简要描述</strong></a></li>
+    <li><a href="#share-的生命周期"><strong>Share 的生命周期</strong></a></li>
+    <li><a href="#stakingnode的生命周期"><strong>StakingNode的生命周期</strong></a></li>
+    <li><a href="#solo-staking"><strong>SOLO Staking</strong></a>
+      <ul>
+        <li><a href="#solo-的前提条件"><strong>SOLO 的前提条件</strong></a></li>
+        <li><a href="#步骤"><strong>步骤</strong></a></li>
+        <li><a href="#1-步骤概要"><strong>1. 步骤概要</strong></a></li>
+        <li><a href="#4-查看股份池状态"><strong>4. 查看股份池状态</strong></a></li>
+        <li><a href="#5-认购股份"><strong>5. 认购股份</strong></a></li>
+        <li><a href="#6-查看账户余额"><strong>6. 查看账户余额</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#如何创建-staking-node"><strong>如何创建 Staking Node</strong></a>
+      <ul>
+        <li><a href="#前提"><strong>前提</strong></a></li>
+        <li><a href="#步骤-1"><strong>步骤</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#如何选中-staking-node-为自己代投票"><strong>如何选中 Staking Node 为自己代投票</strong></a>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+    <li><a href="#本金退回的情况"><strong>本金退回的情况</strong></a></li>
+  </ul>
+</nav>
+
+
+    </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><h1 id="如何在zorro上进行staking">
+  <strong>如何在ZORRO上进行Staking</strong>
+  <a class="anchor" href="#%e5%a6%82%e4%bd%95%e5%9c%a8zorro%e4%b8%8a%e8%bf%9b%e8%a1%8cstaking">#</a>
+</h1>
+<hr>
+<blockquote>
+<p>本文主要为全节点后台程序使用者提供，界面钱包的使用者请静待后续说明文档。</p>
+<p><strong>Staking 功能需要在 <code>117600</code>的高度之后才生效</strong></p>
+</blockquote>
+<p>进行Staking需要开启ZORRO的exchange服务，启动时可以加入<code>--exchange --mineMode</code>两个参数：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">./zro --exchange --mineMode --datadir ~/datadir
+</code></pre></div><p><strong>注意：加入这两个参数后，会对账户余额重新分析，将有一段时间（几个小时）无法看到正确的余额。</strong></p>
+<p>如果需要通过<code>jsonrpc</code>接口调用staking的命令，可以通过加入<code>—rpcapi stake</code>参数开启。开启后<code>jsonrpc</code>的方法名可以跟其他的形式一致，比如<code>stake.buyShare</code>的方法名是<code>stake_buyShare</code>。</p>
+<h2 id="staking-过程简要描述">
+  <strong>Staking 过程简要描述</strong>
+  <a class="anchor" href="#staking-%e8%bf%87%e7%a8%8b%e7%ae%80%e8%a6%81%e6%8f%8f%e8%bf%b0">#</a>
+</h2>
+<hr>
+<ul>
+<li>POS 矿工可以在股份池里面购买投票的股份
+<ul>
+<li>股份设有股份池，无上限。</li>
+<li>股份的价格根据股份池大小动态调整。</li>
+<li>股份池大小 326592 以内股份价格的变化比较平衡。</li>
+<li>股份池大小超过 326592 后股份价格急剧上升。</li>
+</ul>
+</li>
+<li>POW 矿工计算出区块 HASH 之后，将随机在股份池中选择 3 个股份，并广播选票信息。</li>
+<li>POS 矿工收到属于自己的选票信息之后，立即广播自己签名后的投票信息。</li>
+<li>POW 矿工在收到 POS 矿工的投票信息之后，将签名放入区块头部信息中。</li>
+<li>如果正确的投票超过 2 个，POW 矿工将广播区块，完成出块过程。</li>
+<li>POS 矿工可以选择 SOLO 投票或 StakingNode 代投票。</li>
+<li>每个区块奖励分为 POW 奖励和 POS 奖励
+<ul>
+<li>POW 奖励和 POS 奖励的比例为 4 : 4</li>
+<li>POW 奖励和 POS 奖励的大小随各自难度独立变化。</li>
+</ul>
+</li>
+<li>POS 奖励分为 Solo 投票和 StakingNode 代投票两种情况
+<ul>
+<li>Solo 奖励和代投票奖励的比例为 3 : 4</li>
+</ul>
+</li>
+<li>完成投票过程后，所涉及的奖励和本金会在最近的一个支付周期（大约1周）内退回。</li>
+</ul>
+<h2 id="share-的生命周期">
+  <strong>Share 的生命周期</strong>
+  <a class="anchor" href="#share-%e7%9a%84%e7%94%9f%e5%91%bd%e5%91%a8%e6%9c%9f">#</a>
+</h2>
+<hr>
+<p><img src="https://sero-media.s3-ap-southeast-1.amazonaws.com/images/jianshu/277023-2ec741ac26b57a57.png" alt="image.png" /></p>
+<ul>
+<li>用户选择一定的价格购买股份后，本金即进入锁定状态**(Lock)**，股份进入当前的股份池中 **(InPool)**。</li>
+<li>POW矿工在出块时随机选择3份股份，被选中的股份进入待投票状态 <strong>(Lottery)</strong>
+<ul>
+<li>至少获得两个投票才能完成出块过程。</li>
+</ul>
+</li>
+<li>POS矿工在接收到待投票消息后，成功将投票信息广播给POW矿工完成出块，股份进入完成状态**(Votted)**
+<ul>
+<li>进入完成状态的股份会在一个支付周期(一周)内归还本金和奖励，同时释放股份。</li>
+</ul>
+</li>
+<li>当区块只有两份成功投票的情况下，另外一份股份则进入错失状态**(Missed)**。
+<ul>
+<li>作为惩罚，进入错失状态的股份将会在连续锁定3个月后释放本金。</li>
+</ul>
+</li>
+<li>在股份池中没有被成功选中的股份一个月后过期**(Expire)**
+<ul>
+<li>过期时会释放本金。</li>
+</ul>
+</li>
+</ul>
+<h2 id="stakingnode的生命周期">
+  <strong>StakingNode的生命周期</strong>
+  <a class="anchor" href="#stakingnode%e7%9a%84%e7%94%9f%e5%91%bd%e5%91%a8%e6%9c%9f">#</a>
+</h2>
+<hr>
+<p><img src="https://sero-media.s3-ap-southeast-1.amazonaws.com/images/jianshu/277023-c92bcb3bb1712720.png" alt="image.png" /></p>
+<ul>
+<li>运营者通过锁定20万ZORRO币可以获得运营StakingNode 的权利。</li>
+<li>StakingNode在运营一个月后，才能通过手工关闭，进入关闭状态 <strong>(Close)</strong>
+<ul>
+<li>关闭之后将不允许新的股份代投申请。</li>
+<li>同时运营者有义务完成现在StakingNode中已有的股份。</li>
+</ul>
+</li>
+<li>StakingNode在同时满足下面两个条件下将归还本金进入结束状态**(Finish)**：
+<ul>
+<li>所有代投股份本金全部释放</li>
+<li>进入关闭状态</li>
+</ul>
+</li>
+</ul>
+<h2 id="solo-staking">
+  <strong>SOLO Staking</strong>
+  <a class="anchor" href="#solo-staking">#</a>
+</h2>
+<hr>
+<p>你拥有一个全节点程序(ZORRO)，并且拥有一定数量的 ZORRO 代币，既可进行SOLO，获取POS奖励部分比例为 3 的奖励。</p>
+<h3 id="solo-的前提条件">
+  <strong>SOLO 的前提条件</strong>
+  <a class="anchor" href="#solo-%e7%9a%84%e5%89%8d%e6%8f%90%e6%9d%a1%e4%bb%b6">#</a>
+</h3>
+<ol>
+<li>一个可以持续运行的全节点程序(ZORRO)，并且已经同步完成区块。</li>
+<li>ZORRO链上账户中拥有一定数量的 ZORRO 代币。</li>
+</ol>
+<h3 id="步骤">
+  <strong>步骤</strong>
+  <a class="anchor" href="#%e6%ad%a5%e9%aa%a4">#</a>
+</h3>
+<h3 id="1-步骤概要">
+  <strong>1. 步骤概要</strong>
+  <a class="anchor" href="#1-%e6%ad%a5%e9%aa%a4%e6%a6%82%e8%a6%81">#</a>
+</h3>
+<ol>
+<li>确认拥有购买股份的ZORRO代币。
+<ul>
+<li><strong>发放收益或者股份过期的时候本金也会一起退回</strong></li>
+</ul>
+</li>
+<li>创建投票账户。</li>
+<li>开启自动投票功能（解锁投票账户）。</li>
+<li>在股份池中购买股份。</li>
+<li>查看当前股份情况。</li>
+<li>确认收益。</li>
+</ol>
+<blockquote>
+<p><strong>注意：一定要备份好账户密钥，普通用户可以拷贝keystore进行备份，也可以导出助记词：</strong></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">personal</span>.<span style="color:#a6e22e">exportMnemonic</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>])
+<span style="color:#66d9ef">export</span> <span style="color:#a6e22e">account</span> <span style="color:#a6e22e">mnemonic</span> <span style="color:#ae81ff">5</span><span style="color:#a6e22e">bEgN9YL</span>......<span style="color:#a6e22e">Xrpti4zeamkdD16C</span>
+<span style="color:#a6e22e">Passphrase</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1234</span>                             <span style="color:#75715e">//密码
+</span><span style="color:#75715e"></span><span style="color:#e6db74">&#34;casino crys ... ... en unaware route&#34;</span>
+</code></pre></div><p>可以这样导入助记词：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">personal</span>.<span style="color:#a6e22e">importMnemonic</span>(<span style="color:#e6db74">&#34;casino cry ... ... re route&#34;</span>,<span style="color:#e6db74">&#34;1234&#34;</span>)  <span style="color:#75715e">//1234 是密码
+</span></code></pre></div></blockquote>
+<h4 id="2-确认资产账户">
+  <strong>2. 确认资产账户</strong>
+  <a class="anchor" href="#2-%e7%a1%ae%e8%ae%a4%e8%b5%84%e4%ba%a7%e8%b4%a6%e6%88%b7">#</a>
+</h4>
+<p>为了安全，ZORRO 的资产账户和投票账户是分离的，本金和奖励只会由资产账户处理，我们现在确认资产账户。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>]
+<span style="color:#e6db74">&#34;5bEgN9YLqC......4zeamkdD16C&#34;</span>   <span style="color:#75715e">//账户公钥PK
+</span><span style="color:#75715e"></span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">fromTa</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">getBalance</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>]).<span style="color:#a6e22e">tkn</span>.<span style="color:#a6e22e">ZORRO</span>)
+<span style="color:#ae81ff">10</span>               <span style="color:#75715e">//20 个ZORRO
+</span></code></pre></div><h4 id="3-创建投票账户">
+  <strong>3. 创建投票账户</strong>
+  <a class="anchor" href="#3-%e5%88%9b%e5%bb%ba%e6%8a%95%e7%a5%a8%e8%b4%a6%e6%88%b7">#</a>
+</h4>
+<p>投票账户里面不处理资产，只用来进行投票签名。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">personal</span>.<span style="color:#a6e22e">newAccount</span>(<span style="color:#e6db74">&#34;1234&#34;</span>)
+<span style="color:#e6db74">&#34;2tuxyM5uL4......Ce5xNPokr&#34;</span>
+<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>]
+<span style="color:#e6db74">&#34;2tuxyM5uL4......Ce5xNPokr&#34;</span>    <span style="color:#75715e">//账户公钥PK
+</span></code></pre></div><p><strong>投票账户需要永久解锁，以便于被抽中后可以快速的进行投票。</strong></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">personal</span>.<span style="color:#a6e22e">unlockAccount</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>],<span style="color:#e6db74">&#34;1234&#34;</span>,<span style="color:#ae81ff">0</span>)
+</code></pre></div><p><strong>注意：SOLO Staking 需要确保全节点网络稳定，否则可能导致投票被 MISS</strong></p>
+<h3 id="4-查看股份池状态">
+  <strong>4. 查看股份池状态</strong>
+  <a class="anchor" href="#4-%e6%9f%a5%e7%9c%8b%e8%82%a1%e4%bb%bd%e6%b1%a0%e7%8a%b6%e6%80%81">#</a>
+</h3>
+<ul>
+<li>
+<p>跟staking有关的接口都在stake对象里面</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>
+{
+  <span style="color:#a6e22e">sharePoolSize</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,                    <span style="color:#75715e">//股份池当前大小
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">sharePrice</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x1bc16d674ec80000&#34;</span>,        <span style="color:#75715e">//当前股份价格
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">buyShare</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">closeStakePool</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">getShare</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">getSharePoolSize</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(<span style="color:#a6e22e">callback</span>),
+  <span style="color:#a6e22e">getSharePrice</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(<span style="color:#a6e22e">callback</span>),
+  <span style="color:#a6e22e">modifyStakePoolFee</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">modifyStakePoolVote</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">myShare</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">poolState</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">registStakePool</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>(),
+  <span style="color:#a6e22e">stakePools</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">function</span>()
+}
+</code></pre></div></li>
+<li>
+<p>查看当前股份池的情况</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">fromTa</span>(<span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">toDecimal</span>(<span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">sharePrice</span>))
+<span style="color:#e6db74">&#34;2&#34;</span>     <span style="color:#75715e">// 当前股份价各是 2 ZORRO
+</span><span style="color:#75715e"></span><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">toDecimal</span>(<span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">sharePoolSize</span>)
+<span style="color:#ae81ff">0</span>       <span style="color:#75715e">// 当前股份池里面是 0 个股份
+</span></code></pre></div></li>
+</ul>
+<h3 id="5-认购股份">
+  <strong>5. 认购股份</strong>
+  <a class="anchor" href="#5-%e8%ae%a4%e8%b4%ad%e8%82%a1%e4%bb%bd">#</a>
+</h3>
+<ul>
+<li>
+<p>估算能购买的股份数</p>
+<ul>
+<li>因为股份价格随股份池的大小线性增加，所以需要先估算可购买的股份数。</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">estimateShares</span>({
+      <span style="color:#a6e22e">from</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>],        <span style="color:#75715e">//资金账户
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">vote</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>],        <span style="color:#75715e">//投票账户
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">value</span><span style="color:#f92672">:</span><span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">toTa</span>(<span style="color:#ae81ff">20</span>)           <span style="color:#75715e">//可出的总金
+</span><span style="color:#75715e"></span>})
+{
+  <span style="color:#a6e22e">avPrice</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x1bc6ab6c2dfe1734&#34;</span>,          <span style="color:#75715e">//平均股份价格
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">basePrice</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x1bc16d674ec80000&#34;</span>,        <span style="color:#75715e">//基础股份价格
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">total</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x9&#34;</span>                            <span style="color:#75715e">//可购买数量
+</span><span style="color:#75715e"></span>}
+</code></pre></div></li>
+<li>
+<p>认购，from 资金账户，vote 是投票账户，value是本次认购资金</p>
+<ul>
+<li>为了使购买股份分散，每次最多购买1000分股份。</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span>   <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">buyShare</span>({<span style="color:#a6e22e">from</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>],<span style="color:#a6e22e">vote</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>],<span style="color:#a6e22e">value</span><span style="color:#f92672">:</span><span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">toTa</span>(<span style="color:#ae81ff">20</span>)})
+<span style="color:#e6db74">&#34;0xac137baf4cd195....17c1fcb3edae4d25&#34;</span>
+<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">getTransactionReceipt</span>(<span style="color:#e6db74">&#34;0xac137baf4....cb3edae4d25&#34;</span>)
+{
+  ....
+  <span style="color:#a6e22e">poolId</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+  <span style="color:#a6e22e">shareId</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb5b01116f......71015afc6f&#34;</span>,   <span style="color:#75715e">//购买到的股份ID
+</span><span style="color:#75715e"></span>  ....
+}
+</code></pre></div></li>
+<li>
+<p>查看本次股份购买的情况</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">getShare</span>(<span style="color:#e6db74">&#34;0xb5b01116f......71015afc6f&#34;</span>)
+{
+  <span style="color:#a6e22e">addr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;5bEgN9YLq......4zeamkdD16C&#34;</span>,                <span style="color:#75715e">//资金账户收款码
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">fee</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,                                            <span style="color:#75715e">//被抽成费率
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">id</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb5b01116f3e8......2a08b28171015afc6f&#34;</span>,      <span style="color:#75715e">//你的股份ID
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">lastPayTime</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x147bf2&#34;</span>,                           <span style="color:#75715e">//上次结算点块号
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">missed</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,                                         <span style="color:#75715e">//丢失的票数
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">price</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">2001844456911510800</span>,                      <span style="color:#75715e">//平均价格
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">profit</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">20814755655292090000</span>,                    <span style="color:#75715e">//总收益
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">remaining</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">71</span>,                                   <span style="color:#75715e">//剩余股份数
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">returnNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x19&#34;</span>,                              <span style="color:#75715e">//已发放本金股份数  v1.0.0-rc6
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">returnProfit</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb6aa43a544af2&#34;</span>,               <span style="color:#75715e">//已发放奖励金额  v1.0.0-rc6
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">status</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,                                      <span style="color:#75715e">//股份总状态：0 有效，1 过期，2 完成
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">total</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">112</span>,                                        <span style="color:#75715e">//总股份数
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">tx</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x860867509de......1d9c5b0f6ee&#34;</span>,            <span style="color:#75715e">//购买该股份的交易hash
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">voteAddr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2tuxyM5uL4ZDk......4xdTPCe5xNPokr&#34;</span>     <span style="color:#75715e">//投票账户的收款码
+</span><span style="color:#75715e"></span>}
+</code></pre></div></li>
+<li>
+<p>查看我的总股份情况</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">myShare</span>(<span style="color:#e6db74">&#34;5bEgN9YLqCBN9......pti4zeamkdD16C&#34;</span>)
+[{
+    <span style="color:#a6e22e">addr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;5bEgN9YLqCB......rpti4zeamkdD16C&#34;</span>,
+    <span style="color:#a6e22e">expired</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,                                <span style="color:#75715e">//股份过期数量
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">missed</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,                                 <span style="color:#75715e">//投票miss数量
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">pools</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+    <span style="color:#a6e22e">remaining</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">10</span>,                             <span style="color:#75715e">//剩下的股份数
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">shareIds</span><span style="color:#f92672">:</span> [                                <span style="color:#75715e">//我拥有的股份ID列表
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0x3f2ae......a0c656d9b7b7&#34;</span>,
+      <span style="color:#e6db74">&#34;0x58395b1......cfa4141d&#34;</span>,
+      <span style="color:#e6db74">&#34;0xb5b011......171015afc6f&#34;</span>
+    ],
+    <span style="color:#a6e22e">total</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">30</span>,                                 <span style="color:#75715e">//我的总股份数
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">voteAddr</span><span style="color:#f92672">:</span> [<span style="color:#e6db74">&#34;2tuxyM5uL4ZDkfp......Vtw4xdTPCe5xNPokr&#34;</span>]    <span style="color:#75715e">//我的投票ID
+</span><span style="color:#75715e"></span>}]
+</code></pre></div></li>
+</ul>
+<h3 id="6-查看账户余额">
+  <strong>6. 查看账户余额</strong>
+  <a class="anchor" href="#6-%e6%9f%a5%e7%9c%8b%e8%b4%a6%e6%88%b7%e4%bd%99%e9%a2%9d">#</a>
+</h3>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">fromTa</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">getBalance</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>]).<span style="color:#a6e22e">tkn</span>.<span style="color:#a6e22e">ZORRO</span>)   <span style="color:#75715e">//资金账户
+</span><span style="color:#75715e"></span><span style="color:#ae81ff">339.980079865355683522</span>
+<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">getBalance</span>(<span style="color:#a6e22e">ZORRO</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>])    <span style="color:#75715e">//投票账户
+</span><span style="color:#75715e"></span>{}
+</code></pre></div><h2 id="如何创建-staking-node">
+  <strong>如何创建 Staking Node</strong>
+  <a class="anchor" href="#%e5%a6%82%e4%bd%95%e5%88%9b%e5%bb%ba-staking-node">#</a>
+</h2>
+<p>由于个人网络不稳定，或者是无法持续的开启全节点，那么就可以委托给 <code>Staking Node</code> 代为投票。</p>
+<p>下面说明如何创建代为投票的 <code>Staking Node</code></p>
+<h3 id="前提">
+  <strong>前提</strong>
+  <a class="anchor" href="#%e5%89%8d%e6%8f%90">#</a>
+</h3>
+<ol>
+<li>拥有一个持续在线的全节点程序(ZORRO)。</li>
+<li>拥有一个包含 20万 ZORRO 余额的链上账户。
+<ul>
+<li>实际需要 20万+1 ZORRO ，1 ZORRO 作为 Gas 费。</li>
+</ul>
+</li>
+<li>拥有良好的网络环境。</li>
+</ol>
+<h3 id="步骤-1">
+  <strong>步骤</strong>
+  <a class="anchor" href="#%e6%ad%a5%e9%aa%a4-1">#</a>
+</h3>
+<h4 id="1-步骤概要-1">
+  <strong>1. 步骤概要</strong>
+  <a class="anchor" href="#1-%e6%ad%a5%e9%aa%a4%e6%a6%82%e8%a6%81-1">#</a>
+</h4>
+<ol>
+<li>确认拥有用来质押的 20 万ZORRO代币。
+<ul>
+<li>Node 关闭的时候本金会退回</li>
+</ul>
+</li>
+<li>创建代投票账户。</li>
+<li>开启自动代投票功能（解锁代投票账户）。</li>
+<li>质押ZORRO币开通 Staking Node</li>
+<li>查看当前节点委托情况情况。</li>
+<li>确认收益。</li>
+</ol>
+<h4 id="2-确认资产账户-1">
+  <strong>2. 确认资产账户</strong>
+  <a class="anchor" href="#2-%e7%a1%ae%e8%ae%a4%e8%b5%84%e4%ba%a7%e8%b4%a6%e6%88%b7-1">#</a>
+</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>]
+<span style="color:#e6db74">&#34;5bEgN9YLqC......4zeamkdD16C&#34;</span>
+<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">fromTa</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">getBalance</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>]).<span style="color:#a6e22e">tkn</span>.<span style="color:#a6e22e">ZORRO</span>)
+<span style="color:#ae81ff">200000.980079865355683522</span>         <span style="color:#75715e">// &gt; 20万 ZORRO
+</span></code></pre></div><h4 id="3-创建代投票账户">
+  <strong>3. 创建代投票账户</strong>
+  <a class="anchor" href="#3-%e5%88%9b%e5%bb%ba%e4%bb%a3%e6%8a%95%e7%a5%a8%e8%b4%a6%e6%88%b7">#</a>
+</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">personal</span>.<span style="color:#a6e22e">newAccount</span>(<span style="color:#e6db74">&#34;1234&#34;</span>)
+<span style="color:#e6db74">&#34;2tuxyM5uL4......w4xdTPCe5xNPokr&#34;</span>
+<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>]
+<span style="color:#e6db74">&#34;2tuxyM5uL4......Ce5xNPokr&#34;</span>
+</code></pre></div><h4 id="4-开启自动代投票功能解锁代投票账户">
+  <strong>4. 开启自动代投票功能（解锁代投票账户）</strong>
+  <a class="anchor" href="#4-%e5%bc%80%e5%90%af%e8%87%aa%e5%8a%a8%e4%bb%a3%e6%8a%95%e7%a5%a8%e5%8a%9f%e8%83%bd%e8%a7%a3%e9%94%81%e4%bb%a3%e6%8a%95%e7%a5%a8%e8%b4%a6%e6%88%b7">#</a>
+</h4>
+<p><strong>投票账户需要永久解锁，以便于被抽中后可以快速的进行投票。</strong></p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">personal</span>.<span style="color:#a6e22e">unlockAccount</span>(<span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>],<span style="color:#e6db74">&#34;1234&#34;</span>,<span style="color:#ae81ff">0</span>)
+</code></pre></div><p><strong>注意：</strong> StakingNode 需要确保全节点网络稳定，否则可能导致投票被 MISS，Miss的投票可能会导致StakingNode 本金锁定时间增加。</p>
+<h4 id="5-质押zorro币注册-staking-node">
+  <strong>5. 质押ZORRO币注册 Staking Node</strong>
+  <a class="anchor" href="#5-%e8%b4%a8%e6%8a%bczorro%e5%b8%81%e6%b3%a8%e5%86%8c-staking-node">#</a>
+</h4>
+<p>客户端需要连接有10个以上的<code>peer</code>才能开启注册权益池的指令</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">admin</span>.<span style="color:#a6e22e">peers</span>.<span style="color:#a6e22e">length</span>
+<span style="color:#ae81ff">15</span>
+</code></pre></div><p>开始注册<code>StakingNode</code>，注意在本例中<code>accounts[0]</code>拥有20万ZORRO币，是资金账户。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">registStakePool</span>({
+      <span style="color:#a6e22e">from</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>],        <span style="color:#75715e">//资金账户
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">vote</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>],        <span style="color:#75715e">//投票账户
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">value</span><span style="color:#f92672">:</span><span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">toTa</span>(<span style="color:#ae81ff">200000</span>),      <span style="color:#75715e">//注册资金
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">fee</span><span style="color:#f92672">:</span><span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">toHex</span>(<span style="color:#ae81ff">2500</span>)    <span style="color:#75715e">//抽成，最高7500代表抽成75%，最低2500代表抽成25%
+</span><span style="color:#75715e"></span>})
+<span style="color:#e6db74">&#34;0xecb3b5b235....8d35d7d1651&#34;</span>       <span style="color:#75715e">//注册生成的交易hash
+</span></code></pre></div><p>可以通过查看交易收据查看本次注册的<code>StakingNode</code>的<code>ID</code>。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">getTransactionReceipt</span>(<span style="color:#e6db74">&#34;0xecb3b5b....7d1651&#34;</span>)
+{
+  ......
+  <span style="color:#a6e22e">poolId</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb1e20b74......2b35888176d&#34;</span>,          <span style="color:#75715e">//StakingNode ID
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">shareId</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+  ......
+}
+</code></pre></div><p>**注意：**<code>StakingNode</code> 质押的本金需要锁定3个月之后才能解锁，但是必须在关闭权益池并且没有指向权益池的股份后才能回收。</p>
+<h4 id="6-查看当前节点委托情况情况以及收益">
+  <strong>6. 查看当前节点委托情况情况以及收益</strong>
+  <a class="anchor" href="#6-%e6%9f%a5%e7%9c%8b%e5%bd%93%e5%89%8d%e8%8a%82%e7%82%b9%e5%a7%94%e6%89%98%e6%83%85%e5%86%b5%e6%83%85%e5%86%b5%e4%bb%a5%e5%8f%8a%e6%94%b6%e7%9b%8a">#</a>
+</h4>
+<p>可以通过 <code>poolState</code> 方法查看<code>StakingNode</code>的状态。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-java" data-lang="java"><span style="color:#f92672">&gt;</span> stake<span style="color:#f92672">.</span><span style="color:#a6e22e">poolState</span><span style="color:#f92672">(</span><span style="color:#e6db74">&#34;0xb1e20b......88176d&#34;</span><span style="color:#f92672">)</span>
+<span style="color:#f92672">{</span>
+  choicedNum<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span><span style="color:#f92672">,</span>                                     <span style="color:#75715e">//被选中的股份数量
+</span><span style="color:#75715e"></span>  closed<span style="color:#f92672">:</span> <span style="color:#66d9ef">false</span><span style="color:#f92672">,</span>                                         <span style="color:#75715e">//Staking Node是否关闭
+</span><span style="color:#75715e"></span>  createAt<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x11&#34;</span><span style="color:#f92672">,</span>                                       <span style="color:#75715e">//Staking Node创建的时间
+</span><span style="color:#75715e"></span>  expireNum<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span><span style="color:#f92672">,</span>                                      <span style="color:#75715e">//Staking Node过期委托股份数
+</span><span style="color:#75715e"></span>  fee<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xfa0&#34;</span><span style="color:#f92672">,</span>                                          <span style="color:#75715e">//Staking Node的抽成
+</span><span style="color:#75715e"></span>  id<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb1e20b7......88176d&#34;</span><span style="color:#f92672">,</span>                           <span style="color:#75715e">//Staking Node的ID
+</span><span style="color:#75715e"></span>  idPkr<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2E7uXmU9......GeQyGBzSvWE&#34;</span><span style="color:#f92672">,</span>
+  lastPayTime<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span><span style="color:#f92672">,</span>                                    <span style="color:#75715e">//最后一次支付时间
+</span><span style="color:#75715e"></span>  missedNum<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span><span style="color:#f92672">,</span>                                      <span style="color:#75715e">//错失的票数
+</span><span style="color:#75715e"></span>  own<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;5bEgN9YLqC......4zeamkdD16C&#34;</span><span style="color:#f92672">,</span>                    
+  shareNum<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span><span style="color:#f92672">,</span>                                       <span style="color:#75715e">//总股份数
+</span><span style="color:#75715e"></span>  tx<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xecb3b5b......d1651&#34;</span><span style="color:#f92672">,</span>
+  voteAddress<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2tuxyM5uL4......w4xdTPCe5xNPokr&#34;</span><span style="color:#f92672">,</span>
+  wishVoteNum<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span><span style="color:#f92672">,</span>
+  profit<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x100&#34;</span>
+  returnProfit<span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x2d05ad6bd&#34;</span>                 <span style="color:#75715e">//已发放奖励金额  v1.0.0-rc6
+</span><span style="color:#75715e"></span><span style="color:#f92672">}</span>
+</code></pre></div><h4 id="7-节点统计接口-v100-rc6">
+  <strong>7. 节点统计接口 <code>v1.0.0-rc6</code></strong>
+  <a class="anchor" href="#7-%e8%8a%82%e7%82%b9%e7%bb%9f%e8%ae%a1%e6%8e%a5%e5%8f%a3-v100-rc6">#</a>
+</h4>
+<p>有开发能力的用户可以通过统计接口迭代每一个块号的某个<code>StakingNode</code>和在其中<code>Share</code>的状态，得到更加细节的数据。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">getStakeInfo</span>(
+  <span style="color:#e6db74">&#34;0xb1e20b......88176d&#34;</span>,       <span style="color:#75715e">//StakingNode Id
+</span><span style="color:#75715e"></span>  <span style="color:#ae81ff">13400008</span>,                     <span style="color:#75715e">//起始块号
+</span><span style="color:#75715e"></span>  <span style="color:#ae81ff">13400009</span>                      <span style="color:#75715e">//结束块号(不包含在结果中)
+</span><span style="color:#75715e"></span>)
+{
+  <span style="color:#a6e22e">pools</span><span style="color:#f92672">:</span> [{                         <span style="color:#75715e">//1300008 块时节点状态
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">blockNumber</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1300008</span>,
+      <span style="color:#a6e22e">lastPayTime</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,              <span style="color:#75715e">//结算块号，当这个值与blockNumber一致时，发放当前所有收益
+</span><span style="color:#75715e"></span>      ......
+      <span style="color:#a6e22e">wishVoteNum</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>
+  }],
+  <span style="color:#a6e22e">shares</span><span style="color:#f92672">:</span> [{                       <span style="color:#75715e">//1300010 块时的股份状态
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">blockNumber</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1300010</span>,
+      <span style="color:#a6e22e">lastPayTime</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,              <span style="color:#75715e">//结算块号，当这个值与blockNumber一致时，发放当前所有收益和本金
+</span><span style="color:#75715e"></span>      ......
+      <span style="color:#a6e22e">tx</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xe622c3ff1b7863ed861252538f3bd52f78914af716a79121ccdf05f54d972a11&#34;</span>
+  }]
+}
+</code></pre></div><h2 id="如何选中-staking-node-为自己代投票">
+  <strong>如何选中 Staking Node 为自己代投票</strong>
+  <a class="anchor" href="#%e5%a6%82%e4%bd%95%e9%80%89%e4%b8%ad-staking-node-%e4%b8%ba%e8%87%aa%e5%b7%b1%e4%bb%a3%e6%8a%95%e7%a5%a8">#</a>
+</h2>
+<hr>
+<p>普通用户只需要在购买股份的时候指定代投的Staking Node，即可不用部署全节点，享受方便的代投票服务。</p>
+<h4 id="1查询全网staking-node列表">
+  <strong>1.查询全网Staking Node列表</strong>
+  <a class="anchor" href="#1%e6%9f%a5%e8%af%a2%e5%85%a8%e7%bd%91staking-node%e5%88%97%e8%a1%a8">#</a>
+</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">stakePools</span>()
+[{
+    <span style="color:#a6e22e">choicedNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,                          <span style="color:#75715e">//被选中的股份数
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">closed</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">false</span>,                              <span style="color:#75715e">//是否关闭
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">createAt</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,
+    <span style="color:#a6e22e">expireNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,                           <span style="color:#75715e">//过期股份数
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">fee</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xfa0&#34;</span>,                               <span style="color:#75715e">//抽成费用
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">id</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb1e20b7......2b35888176d&#34;</span>,           <span style="color:#75715e">//StakingNode ID
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">idPkr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2E7uXm......yGBzSvWE&#34;</span>,
+    <span style="color:#a6e22e">lastPayTime</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,
+    <span style="color:#a6e22e">missedNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,                           <span style="color:#75715e">//丢失票数
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">own</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;4ujQrFsaYq......WZzxtnqgTsL&#34;</span>,
+    <span style="color:#a6e22e">shareNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,                            <span style="color:#75715e">//总股份数
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">tx</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xecb3b5b......35d7d1651&#34;</span>,
+    <span style="color:#a6e22e">voteAddress</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;21F6gyEUw......zMZ5VtGL2&#34;</span>,
+    <span style="color:#a6e22e">wishVoteNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>
+}, {
+    <span style="color:#a6e22e">choicedNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xac&#34;</span>,
+    <span style="color:#a6e22e">closed</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">false</span>,
+    <span style="color:#a6e22e">createAt</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>,
+    <span style="color:#a6e22e">expireNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x30d&#34;</span>,
+    <span style="color:#a6e22e">fee</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x123b&#34;</span>,
+    <span style="color:#a6e22e">id</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc48e455......2af708a&#34;</span>,
+    <span style="color:#a6e22e">idPkr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2WCHu3......jbFrXWE&#34;</span>,
+    <span style="color:#a6e22e">lastPayTime</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x12b404&#34;</span>,
+    <span style="color:#a6e22e">missedNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x60&#34;</span>,
+    <span style="color:#a6e22e">own</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2WCHu3bM......jbFrXWE&#34;</span>,
+    <span style="color:#a6e22e">shareNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x4fe&#34;</span>,
+    <span style="color:#a6e22e">tx</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb9a0a......dc0212&#34;</span>,
+    <span style="color:#a6e22e">voteAddress</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;JyRPyD8n......bucfZbRH&#34;</span>,
+    <span style="color:#a6e22e">wishVoteNum</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0&#34;</span>
+}]
+</code></pre></div><h4 id="2-在购买股份的时候选择代投票staking-node">
+  <strong>2. 在购买股份的时候选择代投票Staking Node</strong>
+  <a class="anchor" href="#2-%e5%9c%a8%e8%b4%ad%e4%b9%b0%e8%82%a1%e4%bb%bd%e7%9a%84%e6%97%b6%e5%80%99%e9%80%89%e6%8b%a9%e4%bb%a3%e6%8a%95%e7%a5%a8staking-node">#</a>
+</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">buyShare</span>({
+      <span style="color:#a6e22e">from</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">0</span>],          <span style="color:#75715e">//你的资金账户
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">vote</span><span style="color:#f92672">:</span><span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">accounts</span>[<span style="color:#ae81ff">1</span>],          <span style="color:#75715e">//你的投票账户
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">pool</span><span style="color:#f92672">:</span><span style="color:#e6db74">&#34;0xc48e45......af708a&#34;</span>,    <span style="color:#75715e">//选择 StakingNode ID
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">value</span><span style="color:#f92672">:</span><span style="color:#a6e22e">web3</span>.<span style="color:#a6e22e">toTa</span>(<span style="color:#ae81ff">2000</span>)
+})
+<span style="color:#e6db74">&#34;0xb524ec5......b8d511b0b&#34;</span>
+
+<span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">zorro</span>.<span style="color:#a6e22e">getTransactionReceipt</span>(<span style="color:#e6db74">&#34;0xb524e......8d511b0b&#34;</span>)
+{
+  ......
+  <span style="color:#a6e22e">shareId</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x9e415fa4......94e4eef&#34;</span>,        <span style="color:#75715e">//购买的股份ID
+</span><span style="color:#75715e"></span>  ......
+}
+</code></pre></div><ul>
+<li>需要注意的是，在Staking Node工作正常的情况下，不要在全节点账户中解锁你自己的投票账户，因为这样可能会导致收益减少。</li>
+<li>当Staking Node恶意罢工的情况下，才解锁自己的投票账户，进行SOLO投票减少损失。</li>
+</ul>
+<h4 id="3-确认票的staking-node的情况">
+  <strong>3. 确认票的Staking Node的情况</strong>
+  <a class="anchor" href="#3-%e7%a1%ae%e8%ae%a4%e7%a5%a8%e7%9a%84staking-node%e7%9a%84%e6%83%85%e5%86%b5">#</a>
+</h4>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#f92672">&gt;</span> <span style="color:#a6e22e">stake</span>.<span style="color:#a6e22e">getShare</span>(<span style="color:#e6db74">&#34;0x9e415f......94e4eef&#34;</span>)
+{
+  <span style="color:#a6e22e">addr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;4ujQrFsaY......zxtnqgTsL&#34;</span>,
+  <span style="color:#a6e22e">id</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x9e415f......994e4eef&#34;</span>,
+  <span style="color:#a6e22e">missed</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#a6e22e">num</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">723</span>,
+  <span style="color:#a6e22e">pool</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc48e4557......ec62af708a&#34;</span>,       <span style="color:#75715e">//本股份选择的StakingNode ID
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">price</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">2739073884442371600</span>,
+  <span style="color:#a6e22e">returnAmount</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">23602264528913793000</span>,       <span style="color:#75715e">//收益
+</span><span style="color:#75715e"></span>  <span style="color:#a6e22e">status</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#a6e22e">total</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">730</span>,
+  <span style="color:#a6e22e">tx</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb524ec5......b8d511b0b&#34;</span>,
+  <span style="color:#a6e22e">voteAddr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;4ujQrFsaYq......qWZzxtnqgTsL&#34;</span>
+}
+</code></pre></div><h2 id="本金退回的情况">
+  <strong>本金退回的情况</strong>
+  <a class="anchor" href="#%e6%9c%ac%e9%87%91%e9%80%80%e5%9b%9e%e7%9a%84%e6%83%85%e5%86%b5">#</a>
+</h2>
+<hr>
+<ul>
+<li>Staking的设计不会没收或者销毁任何用户的本金。</li>
+<li>发送下面几种情况的时候，股份的本金会退回
+<ul>
+<li>完成投票过程的股份，在发放奖励的同时退回本金。</li>
+<li>股份超过1个月没有被任何矿工选中，会退回本金。</li>
+<li>被选中但没有回应的股份，在第3个月的时候被退回。</li>
+</ul>
+</li>
+<li>同时发生下面几种情况的时候，StakingNode本金会被退回
+<ul>
+<li>StakingNode被所有者关闭</li>
+<li>StakingNode注册完成满一个月</li>
+<li>票池中已经没有委托该StakingNode的股份</li>
+</ul>
+</li>
+</ul>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#staking-过程简要描述"><strong>Staking 过程简要描述</strong></a></li>
+    <li><a href="#share-的生命周期"><strong>Share 的生命周期</strong></a></li>
+    <li><a href="#stakingnode的生命周期"><strong>StakingNode的生命周期</strong></a></li>
+    <li><a href="#solo-staking"><strong>SOLO Staking</strong></a>
+      <ul>
+        <li><a href="#solo-的前提条件"><strong>SOLO 的前提条件</strong></a></li>
+        <li><a href="#步骤"><strong>步骤</strong></a></li>
+        <li><a href="#1-步骤概要"><strong>1. 步骤概要</strong></a></li>
+        <li><a href="#4-查看股份池状态"><strong>4. 查看股份池状态</strong></a></li>
+        <li><a href="#5-认购股份"><strong>5. 认购股份</strong></a></li>
+        <li><a href="#6-查看账户余额"><strong>6. 查看账户余额</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#如何创建-staking-node"><strong>如何创建 Staking Node</strong></a>
+      <ul>
+        <li><a href="#前提"><strong>前提</strong></a></li>
+        <li><a href="#步骤-1"><strong>步骤</strong></a></li>
+      </ul>
+    </li>
+    <li><a href="#如何选中-staking-node-为自己代投票"><strong>如何选中 Staking Node 为自己代投票</strong></a>
+      <ul>
+        <li></li>
+      </ul>
+    </li>
+    <li><a href="#本金退回的情况"><strong>本金退回的情况</strong></a></li>
+  </ul>
+</nav>
+
+ 
+    </aside>
+    
+  </main>
+
+  
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en" dir=>
+
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Flight Interface (FI) 接口说明# FI接口是SI的升级版，支持jsonrpc和console调用，并支持以下特点：
+ zro不维护任何秘钥 提供离线签名方案 用户自主管理UTXO 分为离线接口(local)和在线接口(flight)  对接方案# 账户方案(离线)  在线下生成随机的32byte的seed (可以通过local_genSeed接口生成) 通过local_seed2Sk生成一个私钥sk离线保存。 通过local_sk2Tk生成一个跟踪秘钥 TK提供给在线部分系统。 通过local_tk2Pk生成一个公钥PK，提供给在线部分系统。 通过local_pk2Pkr以及随机数，为每一个用户绑定一个收款码PKr。   充值检测方案(在线)  不断迭代的调用flight_getBlocksInfo获取区块信息 判断block.Outs[i].State.OS.Out_O.Addr或者block.Outs[i].State.OS.Out_Z.PKr是否属于绑定用户。  如果属于绑定用户做下面几个事情  将block.Outs[i]以及跟踪秘钥TK作为参数调用local_decOut解出明文的UTXO数据 从解出的UTXO数据获取作废码列表Nils 将UTXO和Nils关联保存 将UTXO的资产数据入账     判断作废码block.Nils是否已经存在于之前保存的UTXO表中，如果存在，表明这个UTXO已经被用掉。   发送交易（在线和离线）  选择需要转账的UTXO以及相关转账信息构造的参数调用flight_genTxParam，生成txParam。 以txParam和私钥sk为参数调用离线签名方法local_signTxWithSk，生成待广播tx，并记录txhash。 记录local_signTxWithSk的结果中的keys。 以tx为参数调用flight_commitTx广播到全网。 不断的以txhash为参数调用flight_getTxReceipt,获取到打包块号。 确认32个块之后，还能从flight_getTxReceipt获取到数据则为成功交易。 遇到纠纷的时候，可以拿出keys，调用local_confirmOutZ来解出明文数据。    Local 接口#local 接口是离线性质的jsonrpc接口，虽然需要启动zro程序，但是除了rpc服务，zro不需要对外连接和同步数据。因此可以采用下面的参数启动zro服务。
+./zro --offline --mineMode --datadir ~/zroData --nodiscover --rpc --rpcport 8545 --rpcapi local,zorro --rpcaddr 127.">
+<meta name="theme-color" content="#FFFFFF"><meta property="og:title" content="Flight接口说明" />
+<meta property="og:description" content="Flight Interface (FI) 接口说明# FI接口是SI的升级版，支持jsonrpc和console调用，并支持以下特点：
+ zro不维护任何秘钥 提供离线签名方案 用户自主管理UTXO 分为离线接口(local)和在线接口(flight)  对接方案# 账户方案(离线)  在线下生成随机的32byte的seed (可以通过local_genSeed接口生成) 通过local_seed2Sk生成一个私钥sk离线保存。 通过local_sk2Tk生成一个跟踪秘钥 TK提供给在线部分系统。 通过local_tk2Pk生成一个公钥PK，提供给在线部分系统。 通过local_pk2Pkr以及随机数，为每一个用户绑定一个收款码PKr。   充值检测方案(在线)  不断迭代的调用flight_getBlocksInfo获取区块信息 判断block.Outs[i].State.OS.Out_O.Addr或者block.Outs[i].State.OS.Out_Z.PKr是否属于绑定用户。  如果属于绑定用户做下面几个事情  将block.Outs[i]以及跟踪秘钥TK作为参数调用local_decOut解出明文的UTXO数据 从解出的UTXO数据获取作废码列表Nils 将UTXO和Nils关联保存 将UTXO的资产数据入账     判断作废码block.Nils是否已经存在于之前保存的UTXO表中，如果存在，表明这个UTXO已经被用掉。   发送交易（在线和离线）  选择需要转账的UTXO以及相关转账信息构造的参数调用flight_genTxParam，生成txParam。 以txParam和私钥sk为参数调用离线签名方法local_signTxWithSk，生成待广播tx，并记录txhash。 记录local_signTxWithSk的结果中的keys。 以tx为参数调用flight_commitTx广播到全网。 不断的以txhash为参数调用flight_getTxReceipt,获取到打包块号。 确认32个块之后，还能从flight_getTxReceipt获取到数据则为成功交易。 遇到纠纷的时候，可以拿出keys，调用local_confirmOutZ来解出明文数据。    Local 接口#local 接口是离线性质的jsonrpc接口，虽然需要启动zro程序，但是除了rpc服务，zro不需要对外连接和同步数据。因此可以采用下面的参数启动zro服务。
+./zro --offline --mineMode --datadir ~/zroData --nodiscover --rpc --rpcport 8545 --rpcapi local,zorro --rpcaddr 127." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://Ethan-91.github.com/docs/course/flight-interface/" />
+
+<title>Flight接口说明 | ZORRO</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.b3215d9d1d18d9051e7fbe8f256ff80e30f41d29073b86348e230d297b771002.css" integrity="sha256-syFdnR0Y2QUef76PJW/4DjD0HSkHO4Y0jiMNKXt3EAI=">
+<script defer src="/en.search.min.022645c8e8e1021cc95951c67f07e20a34849535ba3f4d6f6cd92dad13d673e0.js" integrity="sha256-AiZFyOjhAhzJWVHGfwfiCjSElTW6P01vbNktrRPWc&#43;A="></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+
+  
+</head>
+
+<body dir=>
+  <input type="checkbox" class="hidden" id="menu-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      
+  <nav>
+<h2 class="book-brand">
+  <a href="/"><span>ZORRO</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>轻松入门</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/build-from-sourcecoude/" class="">源码编译</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/introduction/operate-in-console/" class="">控制台操作</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+      
+        <li class="book-section-flat" >
+          
+  
+    <span>教程</span>
+  
+
+          
+  
+  
+  
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/service-interface/" class="">NODE对接(SI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/exchange-interface/" class="">WALLET对接(EI接口说明)</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/flight-interface/" class="active">Flight接口说明</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/principle-of-anonymous-token/" class="">匿名Token发行原理</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+    <a href="/docs/course/how-to-staking-using-gero/" class="">如何在ZORRO上进行Staking</a>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+        </li>
+      
+    
+  </ul>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside.book-menu nav");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>Flight接口说明</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+    <input type="checkbox" class="hidden" id="toc-control" />
+    <aside class="hidden clearfix">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#对接方案">对接方案</a></li>
+    <li><a href="#local-接口">Local 接口</a>
+      <ul>
+        <li><a href="#账户管理">账户管理</a></li>
+        <li><a href="#utxo解析">UTXO解析</a></li>
+        <li><a href="#离线签名">离线签名</a></li>
+        <li><a href="#确认out_z">确认Out_Z</a></li>
+        <li><a href="#确认out_c">确认Out_C</a></li>
+        <li><a href="#币名接口">币名接口</a></li>
+      </ul>
+    </li>
+    <li><a href="#flight-接口">Flight 接口</a>
+      <ul>
+        <li><a href="#扫描区块">扫描区块</a></li>
+        <li><a href="#获取区块额外信息">获取区块额外信息</a></li>
+        <li><a href="#获取某个utxo详情">获取某个UTXO详情</a></li>
+        <li><a href="#获取原始交易详情">获取原始交易详情</a></li>
+        <li><a href="#获取交易收据">获取交易收据</a></li>
+        <li><a href="#组装交易签名参数">组装交易签名参数</a></li>
+        <li><a href="#广播交易">广播交易</a></li>
+        <li><a href="#通过-tk-和-trace-提取对应的root">通过 TK 和 Trace 提取对应的Root</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+    </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><h1 id="flight-interface-fi-接口说明">
+  Flight Interface (FI) 接口说明
+  <a class="anchor" href="#flight-interface-fi-%e6%8e%a5%e5%8f%a3%e8%af%b4%e6%98%8e">#</a>
+</h1>
+<hr>
+<p>FI接口是SI的升级版，支持jsonrpc和console调用，并支持以下特点：</p>
+<ul>
+<li>zro不维护任何秘钥</li>
+<li>提供离线签名方案</li>
+<li>用户自主管理UTXO</li>
+<li>分为离线接口(local)和在线接口(flight)</li>
+</ul>
+<h2 id="对接方案">
+  对接方案
+  <a class="anchor" href="#%e5%af%b9%e6%8e%a5%e6%96%b9%e6%a1%88">#</a>
+</h2>
+<ul>
+<li>账户方案(离线)
+<ol>
+<li>在线下生成随机的32byte的seed (可以通过<code>local_genSeed</code>接口生成)</li>
+<li>通过<code>local_seed2Sk</code>生成一个私钥<code>sk</code>离线保存。</li>
+<li>通过<code>local_sk2Tk</code>生成一个跟踪秘钥 <code>TK</code>提供给在线部分系统。</li>
+<li>通过<code>local_tk2Pk</code>生成一个公钥<code>PK</code>，提供给在线部分系统。</li>
+<li>通过<code>local_pk2Pkr</code>以及随机数，为每一个用户绑定一个收款码<code>PKr</code>。</li>
+</ol>
+</li>
+<li>充值检测方案(在线)
+<ol>
+<li>不断迭代的调用<code>flight_getBlocksInfo</code>获取区块信息</li>
+<li>判断<code>block.Outs[i].State.OS.Out_O.Addr</code>或者<code>block.Outs[i].State.OS.Out_Z.PKr</code>是否属于绑定用户。
+<ul>
+<li>如果属于绑定用户做下面几个事情
+<ol>
+<li>将<code>block.Outs[i]</code>以及跟踪秘钥<code>TK</code>作为参数调用<code>local_decOut</code>解出明文的UTXO数据</li>
+<li>从解出的<code>UTXO</code>数据获取作废码列表<code>Nils</code></li>
+<li>将<code>UTXO</code>和<code>Nils</code>关联保存</li>
+<li>将<code>UTXO</code>的资产数据入账</li>
+</ol>
+</li>
+</ul>
+</li>
+<li>判断作废码<code>block.Nils</code>是否已经存在于之前保存的<code>UTXO</code>表中，如果存在，表明这个<code>UTXO</code>已经被用掉。</li>
+</ol>
+</li>
+<li>发送交易（在线和离线）
+<ol>
+<li>选择需要转账的<code>UTXO</code>以及相关转账信息构造的参数调用<code>flight_genTxParam</code>，生成<code>txParam</code>。</li>
+<li>以<code>txParam</code>和私钥<code>sk</code>为参数调用离线签名方法<code>local_signTxWithSk</code>，生成待广播<code>tx</code>，并记录<code>txhash</code>。</li>
+<li>记录<code>local_signTxWithSk</code>的结果中的keys。</li>
+<li>以<code>tx</code>为参数调用<code>flight_commitTx</code>广播到全网。</li>
+<li>不断的以<code>txhash</code>为参数调用<code>flight_getTxReceipt</code>,获取到打包块号。</li>
+<li>确认32个块之后，还能从<code>flight_getTxReceipt</code>获取到数据则为成功交易。</li>
+<li>遇到纠纷的时候，可以拿出keys，调用<code>local_confirmOutZ</code>来解出明文数据。</li>
+</ol>
+</li>
+</ul>
+<h2 id="local-接口">
+  Local 接口
+  <a class="anchor" href="#local-%e6%8e%a5%e5%8f%a3">#</a>
+</h2>
+<p><code>local</code> 接口是离线性质的<code>jsonrpc</code>接口，虽然需要启动zro程序，但是除了rpc服务，zro不需要对外连接和同步数据。因此可以采用下面的参数启动<code>zro</code>服务。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">./zro --offline --mineMode --datadir ~/zroData --nodiscover --rpc --rpcport <span style="color:#ae81ff">8545</span> --rpcapi local,zorro --rpcaddr 127.0.0.1 --rpccorsdomain <span style="color:#e6db74">&#34;*&#34;</span> --exchangeValueStr
+</code></pre></div><h3 id="账户管理">
+  账户管理
+  <a class="anchor" href="#%e8%b4%a6%e6%88%b7%e7%ae%a1%e7%90%86">#</a>
+</h3>
+<ul>
+<li>
+<p><strong>随机生成seed</strong></p>
+<p>seed需离线保存</p>
+<ul>
+<li>request</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+      <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+      <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+      <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_genSeed&#34;</span>,
+      <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> []
+ }
+</code></pre></div><ul>
+<li>response</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc0bdec98290c5a2895e357a6f96f4f7f98b6750d37e77971a055579e7246c403&#34;</span>   <span style="color:#75715e">//随机生成的seed，32byte的hex编码。
+</span><span style="color:#75715e"></span>  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div><ul>
+<li>go语言</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">seed</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">c_type</span>.<span style="color:#a6e22e">RandUint256</span>()
+</code></pre></div></li>
+<li>
+<p><strong>由seed生成sk</strong></p>
+<p>私钥需离线使用</p>
+<ul>
+<li>request</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+     <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+     <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+     <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_seed2Sk&#34;</span>,
+     <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0xc0bdec98290c....79e7246c403&#34;</span>,     <span style="color:#75715e">//种子 seed
+</span><span style="color:#75715e"></span>      <span style="color:#ae81ff">1</span>                                   <span style="color:#75715e">//SuperZK版本，1: 1.0 2: 2.0, 不填默认是 1
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div><ul>
+<li>response</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+ <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+ <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x1657f2f6f8a743......595f96be89b4f03&#34;</span>   <span style="color:#75715e">//私钥 sk，64byte的hex编码。
+</span><span style="color:#75715e"></span> <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div><ul>
+<li>go语言</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">sk</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">superzk</span>.<span style="color:#a6e22e">Seed2Sk</span>(
+  <span style="color:#f92672">&amp;</span><span style="color:#a6e22e">seed</span>,
+  <span style="color:#ae81ff">1</span>            <span style="color:#75715e">//superzk协议版本 1:1.0 2:2.0
+</span><span style="color:#75715e"></span>)
+</code></pre></div></li>
+<li>
+<p><strong>由sk生成tk</strong></p>
+<p>跟踪秘钥TK无法对交易进行签名，因此可以在线使用。</p>
+<ul>
+<li>request</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+     <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+     <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+     <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_sk2Tk&#34;</span>,
+     <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0x1657f2f6f8....95f96be89b4f03&#34;</span>      <span style="color:#75715e">//私钥 sk
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div><ul>
+<li>response</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+ <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+ <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;tu1nEPYcBwBZm......r5Y1cXNAs8Ht4z&#34;</span>   <span style="color:#75715e">//跟踪秘钥 tk，64byte 的 base58 编码。
+</span><span style="color:#75715e"></span> <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div><ul>
+<li>Go语言</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">tk</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">superzk</span>.<span style="color:#a6e22e">Sk2Tk</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">sk</span>)
+</code></pre></div></li>
+<li>
+<p><strong>由tk生成PK</strong></p>
+<p>PK是公钥，因此可以在线使用。</p>
+<ul>
+<li>request</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+     <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+     <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+     <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_tk2Pk&#34;</span>,
+     <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;tu1nEPYcBwBZ...1cXNAs8Ht4z&#34;</span>      <span style="color:#75715e">//跟踪秘钥 TK, 可以是 hex 或 base58 编码。
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div><ul>
+<li>response</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+ <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+ <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;tu1nEPYcBwBZm......cZojp6obBD87N&#34;</span>   <span style="color:#75715e">//公钥 PK，64byte 的 base58 编码。
+</span><span style="color:#75715e"></span> <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div><ul>
+<li>Go语言</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">pk</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">superzk</span>.<span style="color:#a6e22e">Tk2Pk</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">tk</span>)
+</code></pre></div></li>
+<li>
+<p><strong>由PK生成PKr</strong></p>
+<p>PKr是收款码，可以在线使用，用来标识用户。</p>
+<ul>
+<li>request</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+     <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+     <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+     <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_pk2Pkr&#34;</span>,
+     <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;tu1nEPYcBwBZ......cZojp6obBD87N&#34;</span>,      <span style="color:#75715e">//公钥 PK, 可以是 hex 或 base58 编码
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0xd7a8cc1c7a1d09575950ca8004e3409ab7a6505b39a8e29783338e5016d8e7d1&#34;</span> <span style="color:#75715e">//32 byte 随机数
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div><ul>
+<li>response</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+ <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+ <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;26fUeqrEbq4qZU......MP9ehQLV5frg&#34;</span>   <span style="color:#75715e">//收款码 PKr， 96byte 的 base58 编码
+</span><span style="color:#75715e"></span> <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div><ul>
+<li>Go语言</li>
+</ul>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">pkr</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">superzk</span>.<span style="color:#a6e22e">Pk2PKr</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">pk</span>)
+</code></pre></div></li>
+</ul>
+<h3 id="utxo解析">
+  UTXO解析
+  <a class="anchor" href="#utxo%e8%a7%a3%e6%9e%90">#</a>
+</h3>
+<p>从<code>flight_getBlocksInfo</code>获取的区块信息中，可以获得新增的<code>UTXO</code>，<code>UTXO</code>是密文的，因此需要用跟踪秘钥<code>TK</code>进行解析，解析的方法<code>local_decOut</code>也是离线的。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+  <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_decOut&#34;</span>,
+  <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      [{                          <span style="color:#75715e">//参数1：需要解析的UTXO列表，来自flight_getBlocksInfo
+</span><span style="color:#75715e"></span>          <span style="color:#a6e22e">Root</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x7b30cc8....510fbb122e&#34;</span>,
+          <span style="color:#a6e22e">State</span><span style="color:#f92672">:</span> {
+              <span style="color:#a6e22e">Num</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">28</span>,
+              <span style="color:#a6e22e">OS</span><span style="color:#f92672">:</span> {
+                  <span style="color:#a6e22e">Index</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">31</span>,
+                  <span style="color:#a6e22e">Out_O</span><span style="color:#f92672">:</span> {                                <span style="color:#75715e">//明文的Out，与Out_Z只会存在一个
+</span><span style="color:#75715e"></span>                      <span style="color:#a6e22e">Addr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x7c02a05...ba6ac83a8&#34;</span>,
+                      <span style="color:#a6e22e">Asset</span><span style="color:#f92672">:</span> {...},
+                      <span style="color:#a6e22e">Memo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000......0000&#34;</span>
+                  },
+                  <span style="color:#a6e22e">Out_Z</span><span style="color:#f92672">:</span> {                               <span style="color:#75715e">//密文的Out
+</span><span style="color:#75715e"></span>                      <span style="color:#a6e22e">AssetCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xa2a0f......745a9&#34;</span>,
+                      <span style="color:#a6e22e">EInfo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x68a9e......b74ecfc493&#34;</span>,
+                      <span style="color:#a6e22e">OutCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc90dc......90ff58f&#34;</span>,
+                      <span style="color:#a6e22e">PKr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x9364f11......14406a3&#34;</span>,       <span style="color:#75715e">//收款码PKr的hex编码
+</span><span style="color:#75715e"></span>                      <span style="color:#a6e22e">Proof</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0341d67......f941b0d&#34;</span>,
+                      <span style="color:#a6e22e">RPK</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x6230d4......02b51c2&#34;</span>
+                  },
+                  <span style="color:#a6e22e">RootCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xff107b......ebdae30a2&#34;</span>
+              },
+              <span style="color:#a6e22e">TxHash</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x921b8......be44829&#34;</span>
+          }
+      }],
+      <span style="color:#e6db74">&#34;tu1nEPYcBwB......5Y1cXNAs8Ht4z&#34;</span>       <span style="color:#75715e">//参数2：该UTXO对应的TK
+</span><span style="color:#75715e"></span>  ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> [{
+      <span style="color:#a6e22e">Asset</span><span style="color:#f92672">:</span> {
+          <span style="color:#a6e22e">Tkn</span><span style="color:#f92672">:</span> {
+              <span style="color:#a6e22e">Currency</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000......005345524f&#34;</span>,           <span style="color:#75715e">//币种名
+</span><span style="color:#75715e"></span>              <span style="color:#a6e22e">Value</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;1000000000000000000&#34;</span>                   <span style="color:#75715e">//金额
+</span><span style="color:#75715e"></span>          },
+          <span style="color:#a6e22e">Tkt</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>                                       <span style="color:#75715e">//Ticket资产，交易所可以忽略
+</span><span style="color:#75715e"></span>      },
+      <span style="color:#a6e22e">Memo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000......0000000000&#34;</span>,                <span style="color:#75715e">//附带信息
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">Nils</span><span style="color:#f92672">:</span> [                                           <span style="color:#75715e">//该UTXO的作废码
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0x5f2324......dda85393&#34;</span>,                            <span style="color:#75715e">//只要在getBlocksInfo时碰到，该
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0x661f10......90a6a720&#34;</span>                             <span style="color:#75715e">//UTXO即被作废
+</span><span style="color:#75715e"></span>    ]
+  }],
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<p>下面是Go语言版的UTXO解析</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">import</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">github</span>.<span style="color:#a6e22e">com</span><span style="color:#f92672">/</span><span style="color:#a6e22e">ZorroChain</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zorro</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zero</span><span style="color:#f92672">/</span><span style="color:#a6e22e">txtool</span><span style="color:#f92672">/</span><span style="color:#a6e22e">flight</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#f92672">import</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">github</span>.<span style="color:#a6e22e">com</span><span style="color:#f92672">/</span><span style="color:#a6e22e">ZorroChain</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zorro</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zero</span><span style="color:#f92672">/</span><span style="color:#a6e22e">txtool</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#f92672">import</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">github</span>.<span style="color:#a6e22e">com</span><span style="color:#f92672">/</span><span style="color:#a6e22e">ZorroChain</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zorro</span><span style="color:#f92672">/</span><span style="color:#a6e22e">czk</span><span style="color:#f92672">/</span><span style="color:#a6e22e">cpt</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#75715e">//---------
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">outs_str</span> <span style="color:#f92672">:=</span> <span style="color:#960050;background-color:#1e0010">&#39;</span>[{<span style="color:#a6e22e">Root</span>:<span style="color:#e6db74">&#34;0x7b30cc8....510fbb122e&#34;</span>,<span style="color:#f92672">...</span>.,<span style="color:#a6e22e">TxHash</span>:<span style="color:#e6db74">&#34;0x921b8......be44829&#34;</span>}}]<span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#a6e22e">tk_str</span> <span style="color:#f92672">:=</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#ae81ff">0xfd1b401d2bbfa09fba577b398b09b5ea075bd8f37773095c6e62271a4b080977</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#75715e">//---------
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">cpt</span>.<span style="color:#a6e22e">ZeroInit_OnlyInOuts</span>() <span style="color:#75715e">//初始化
+</span><span style="color:#75715e">//---------
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">outs</span> []<span style="color:#a6e22e">txtool</span>.<span style="color:#a6e22e">Out</span>
+<span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Unmarshal</span>([]byte(<span style="color:#a6e22e">outs_str</span>),<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">outs</span>)
+<span style="color:#75715e">//---------
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">hexutil</span>.<span style="color:#a6e22e">Decode</span>(<span style="color:#a6e22e">tk_str</span>)
+<span style="color:#a6e22e">tk</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">keys</span>.<span style="color:#a6e22e">Uint512</span>{}
+copy(<span style="color:#a6e22e">tk</span>[:], <span style="color:#a6e22e">bs</span>)
+<span style="color:#75715e">//---------
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">douts</span>,<span style="color:#a6e22e">_</span>=<span style="color:#a6e22e">flight</span>.<span style="color:#a6e22e">DecOut</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">tk</span>,<span style="color:#a6e22e">outs</span>)
+</code></pre></div><h3 id="离线签名">
+  离线签名
+  <a class="anchor" href="#%e7%a6%bb%e7%ba%bf%e7%ad%be%e5%90%8d">#</a>
+</h3>
+<p>在调用<code>flight_genTxParam</code>组装交易签名参数之后，可以传入私钥<code>sk</code>调用离线签名的方法<code>local_signTxWithSk</code>生成最终交易。生成最终交易之后，可以调用<code>flight_commitTx</code>，广播到全网。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+  <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_signTxWithSk&#34;</span>,
+  <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+    {        <span style="color:#75715e">// flight_genTxParam 的结果 txParam
+</span><span style="color:#75715e"></span>        <span style="color:#e6db74">&#34;Cmds&#34;</span><span style="color:#f92672">:</span> {},
+        <span style="color:#e6db74">&#34;Fee&#34;</span><span style="color:#f92672">:</span> {},
+        <span style="color:#e6db74">&#34;From&#34;</span><span style="color:#f92672">:</span> {},
+        <span style="color:#e6db74">&#34;Gas&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">25000</span>,
+      <span style="color:#e6db74">&#34;GasPrice&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1000000000</span>,
+        <span style="color:#e6db74">&#34;Ins&#34;</span><span style="color:#f92672">:</span> [{}],
+        <span style="color:#e6db74">&#34;Outs&#34;</span><span style="color:#f92672">:</span> [{},{}]
+    },
+    <span style="color:#e6db74">&#34;0x1657f2f6......f96be89b4f03&#34;</span>    <span style="color:#75715e">//私钥SK
+</span><span style="color:#75715e"></span>  ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {    <span style="color:#75715e">//最终交易，可以通过flight_commitTx广播到全网
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Gas&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x61a8&#34;</span>,
+      <span style="color:#e6db74">&#34;GasPrice&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3b9aca00&#34;</span>,
+      <span style="color:#e6db74">&#34;Hash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x813f69b7d60fe694ddfd6bec36e2adcba773a4518ee02354bd8f2f339f004a2e&#34;</span>,
+    <span style="color:#e6db74">&#34;Keys&#34;</span><span style="color:#f92672">:</span> [    <span style="color:#75715e">//密文UTXO解析秘钥，不会提交到链上，可以保存作为确认证据。
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0x8e27d9fd65a178569b852cf71e476073b68c2f241074bbd7be712f145b84ee32&#34;</span>, 
+      <span style="color:#e6db74">&#34;0x6d83ce881db4fd68876c9a84f354124a01f94d53e702facb4db8071bc6ae146f&#34;</span>
+    ],
+    <span style="color:#e6db74">&#34;Bases&#34;</span><span style="color:#f92672">:</span> [    <span style="color:#75715e">//密文In解析秘钥，不会提交到链上，可以用flight_trace2Root提取Root。
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0x0000000000000000000000000000000000000000000000000000000000000000&#34;&#34;
+</span><span style="color:#e6db74">    ],
+</span><span style="color:#e6db74">      &#34;</span><span style="color:#a6e22e">Tx</span><span style="color:#e6db74">&#34;: {}
+</span><span style="color:#e6db74">  },
+</span><span style="color:#e6db74">  &#34;</span><span style="color:#a6e22e">error</span><span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<p>也可以使用Go语言版的离线签名</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#f92672">import</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">github</span>.<span style="color:#a6e22e">com</span><span style="color:#f92672">/</span><span style="color:#a6e22e">ZorroChain</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zorro</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zero</span><span style="color:#f92672">/</span><span style="color:#a6e22e">txtool</span><span style="color:#f92672">/</span><span style="color:#a6e22e">flight</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#f92672">import</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">github</span>.<span style="color:#a6e22e">com</span><span style="color:#f92672">/</span><span style="color:#a6e22e">ZorroChain</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zorro</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zero</span><span style="color:#f92672">/</span><span style="color:#a6e22e">txtool</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#f92672">import</span> <span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#a6e22e">github</span>.<span style="color:#a6e22e">com</span><span style="color:#f92672">/</span><span style="color:#a6e22e">ZorroChain</span><span style="color:#f92672">/</span><span style="color:#a6e22e">zorro</span><span style="color:#f92672">/</span><span style="color:#a6e22e">czk</span><span style="color:#f92672">/</span><span style="color:#a6e22e">cpt</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#a6e22e">param_str</span><span style="color:#f92672">:=</span><span style="color:#960050;background-color:#1e0010">&#39;</span>{<span style="color:#e6db74">&#34;Gas&#34;</span>:<span style="color:#ae81ff">25000</span>,<span style="color:#e6db74">&#34;GasPrice&#34;</span>:<span style="color:#ae81ff">1000000000</span>,<span style="color:#e6db74">&#34;From&#34;</span>:{<span style="color:#e6db74">&#34;SKr&#34;</span>:<span style="color:#960050;background-color:#1e0010">&#34;</span><span style="color:#ae81ff">0x0</span> <span style="color:#f92672">...</span>. }<span style="color:#960050;background-color:#1e0010">&#39;</span>  <span style="color:#75715e">//由全节点构造
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">sk_str</span><span style="color:#f92672">:=</span><span style="color:#960050;background-color:#1e0010">&#39;</span><span style="color:#ae81ff">0xfd1b401d2bbfa09fba577b398b09b5ea075bd8f37773095c6e62271a4b080977</span><span style="color:#960050;background-color:#1e0010">&#39;</span>
+<span style="color:#75715e">//------
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">cpt</span>.<span style="color:#a6e22e">ZeroInit_OnlyInOuts</span>() <span style="color:#75715e">//初始化
+</span><span style="color:#75715e">//------
+</span><span style="color:#75715e"></span><span style="color:#66d9ef">var</span> <span style="color:#a6e22e">param</span> <span style="color:#a6e22e">txtool</span>.<span style="color:#a6e22e">GTxParam</span>
+<span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Unmarshal</span>([]byte(<span style="color:#a6e22e">param_str</span>),<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">param</span>)
+<span style="color:#a6e22e">bs</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">hexutil</span>.<span style="color:#a6e22e">Decode</span>(<span style="color:#a6e22e">sk_str</span>)
+<span style="color:#a6e22e">sk</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">keys</span>.<span style="color:#a6e22e">Uint512</span>{}
+copy(<span style="color:#a6e22e">sk</span>[:], <span style="color:#a6e22e">bs</span>)
+<span style="color:#75715e">//------可以自己组装SK---------
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">gtx</span>, <span style="color:#a6e22e">_</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">flight</span>.<span style="color:#a6e22e">SignTx</span>(<span style="color:#a6e22e">sk</span>,<span style="color:#a6e22e">param</span>)
+<span style="color:#75715e">//------
+</span><span style="color:#75715e"></span><span style="color:#a6e22e">tx</span>, <span style="color:#a6e22e">_</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">json</span>.<span style="color:#a6e22e">Marshal</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">gtx</span>)
+</code></pre></div><h3 id="确认out_z">
+  确认Out_Z
+  <a class="anchor" href="#%e7%a1%ae%e8%ae%a4out_z">#</a>
+</h3>
+<p>在交易签名的时候，会为每个Desc_Z中的Out生成一个Key，用这个Key可以通过接口<code>local_confirmOutZ</code>反解出这个的UTXO的明文。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+  <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_confirmOutZ&#34;</span>,
+  <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0x8e27d9fd65a17....7be712f145b84ee32&#34;</span>,    <span style="color:#75715e">//Key 解密秘钥，签名的时候返回出来。
+</span><span style="color:#75715e"></span>      {                                          <span style="color:#75715e">//Out_Z的内容
+</span><span style="color:#75715e"></span>          <span style="color:#a6e22e">AssetCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb5c26....7bcdaf0425&#34;</span>,
+          <span style="color:#a6e22e">EInfo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x589fa119....741e562c1&#34;</span>,
+          <span style="color:#a6e22e">OutCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb1908....3e48c14&#34;</span>,
+          <span style="color:#a6e22e">PKr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x1da430a....27b0126&#34;</span>,
+          <span style="color:#a6e22e">Proof</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x03eed61....b24ad9b2a&#34;</span>,
+          <span style="color:#a6e22e">RPK</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc80da39....3263c2&#34;</span>
+      }
+  ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {
+      <span style="color:#a6e22e">Asset</span><span style="color:#f92672">:</span> {
+          <span style="color:#a6e22e">Tkn</span><span style="color:#f92672">:</span> {
+              <span style="color:#a6e22e">Currency</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x000000000....0000005345524f&#34;</span>,
+              <span style="color:#a6e22e">Value</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;1000&#34;</span>
+          },
+          <span style="color:#a6e22e">Tkt</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+      },
+      <span style="color:#a6e22e">Memo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000....00000000&#34;</span>,
+      <span style="color:#a6e22e">Nils</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+  },
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<ul>
+<li>
+<p>Go语言</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">dec_out</span>,<span style="color:#a6e22e">err</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">flight</span>.<span style="color:#a6e22e">ConfirmOutZ</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">key</span>,<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">outz</span>)
+</code></pre></div></li>
+</ul>
+<h3 id="确认out_c">
+  确认Out_C
+  <a class="anchor" href="#%e7%a1%ae%e8%ae%a4out_c">#</a>
+</h3>
+<p>在交易签名的时候，会为每个Tx1中的Out_C生成一个Key，用这个Key可以通过接口<code>local_confirmOutC</code>反解出这个的UTXO的明文。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+  <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_confirmOutC&#34;</span>,
+  <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0x8e27d9fd65a17....7be712f145b84ee32&#34;</span>,    <span style="color:#75715e">//Key 解密秘钥，签名的时候返回出来。
+</span><span style="color:#75715e"></span>      {                                          <span style="color:#75715e">//Out_C的内容
+</span><span style="color:#75715e"></span>          <span style="color:#a6e22e">AssetCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb5c26....7bcdaf0425&#34;</span>,
+          <span style="color:#a6e22e">EInfo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x589fa119....741e562c1&#34;</span>,
+          <span style="color:#a6e22e">PKr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x1da430a....27b0126&#34;</span>,
+          <span style="color:#a6e22e">Proof</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x03eed61....b24ad9b2a&#34;</span>,
+          <span style="color:#a6e22e">RPK</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc80da39....3263c2&#34;</span>
+      }
+  ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {
+      <span style="color:#a6e22e">Asset</span><span style="color:#f92672">:</span> {
+          <span style="color:#a6e22e">Tkn</span><span style="color:#f92672">:</span> {
+              <span style="color:#a6e22e">Currency</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x000000000....0000005345524f&#34;</span>,
+              <span style="color:#a6e22e">Value</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;1000&#34;</span>
+          },
+          <span style="color:#a6e22e">Tkt</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+      },
+      <span style="color:#a6e22e">Memo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000....00000000&#34;</span>,
+      <span style="color:#a6e22e">Nils</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+  },
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<ul>
+<li>
+<p>Go语言</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript"><span style="color:#a6e22e">dec_out</span>,<span style="color:#a6e22e">err</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">flight</span>.<span style="color:#a6e22e">ConfirmOutC</span>(<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">key</span>,<span style="color:#f92672">&amp;</span><span style="color:#a6e22e">outc</span>)
+</code></pre></div></li>
+</ul>
+<h3 id="币名接口">
+  币名接口
+  <a class="anchor" href="#%e5%b8%81%e5%90%8d%e6%8e%a5%e5%8f%a3">#</a>
+</h3>
+<p>币种Id是一个32byte的数组，将所有前面的<code>\0</code>去掉之后可以转换为字符串。离线方法也提供了方便的互相转换的方法。</p>
+<ul>
+<li>
+<p><strong>币名转币种Id</strong></p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+    <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+    <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+    <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_currencyToId&#34;</span>,
+    <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;ZORRO&#34;</span>     <span style="color:#75715e">//币名字符串
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+    <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+    <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000000....000005345524f&#34;</span>,    <span style="color:#75715e">//币种Id
+</span><span style="color:#75715e"></span>    <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+<li>
+<p>Go语言</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">currency_id</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">flight</span>.<span style="color:#a6e22e">CurrencyToId</span>(<span style="color:#a6e22e">currency_str</span>)
+</code></pre></div></li>
+</ul>
+</li>
+<li>
+<p><strong>币种Id转币名</strong></p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+    <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+    <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+    <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;local_idToCurrency&#34;</span>,
+    <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0x00000000....000005345524f&#34;</span>     <span style="color:#75715e">//币种Id
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+    <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+    <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;ZORRO&#34;</span>,    <span style="color:#75715e">//币名
+</span><span style="color:#75715e"></span>    <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+<li>
+<p>Go语言</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-go" data-lang="go"><span style="color:#a6e22e">currency_str</span><span style="color:#f92672">:=</span><span style="color:#a6e22e">flight</span>.<span style="color:#a6e22e">IdToCurrency</span>(<span style="color:#a6e22e">currency_id</span>)
+</code></pre></div></li>
+</ul>
+</li>
+</ul>
+<h2 id="flight-接口">
+  Flight 接口
+  <a class="anchor" href="#flight-%e6%8e%a5%e5%8f%a3">#</a>
+</h2>
+<p>启动flight接口的zro需要同步最新的区块，提供的是在线功能。</p>
+<p>启动方式是：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sh" data-lang="sh">./zro --mineMode --datadir ~/zroData --port <span style="color:#ae81ff">53717</span> --rpc --rpcport <span style="color:#ae81ff">8545</span> --rpcapi flight,zorro --rpcaddr 127.0.0.1  --rpccorsdomain <span style="color:#e6db74">&#34;*&#34;</span> --keystore ~/keystore --confirmedBlock <span style="color:#ae81ff">32</span> --rpcwritetimeout <span style="color:#ae81ff">1800</span> --exchangeValueStr
+</code></pre></div><h3 id="扫描区块">
+  扫描区块
+  <a class="anchor" href="#%e6%89%ab%e6%8f%8f%e5%8c%ba%e5%9d%97">#</a>
+</h3>
+<p>扫描区块可以获得区块中的新增UTXO和UTXO作废信息，但不管明文还是密文的UTXO都需要调用<code>local_decOut</code>解密才能获取更多的细节。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+      <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+      <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+      <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_getBlocksInfo&#34;</span>,
+      <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#ae81ff">15</span>,      <span style="color:#75715e">//起始区块高度
+</span><span style="color:#75715e"></span>      <span style="color:#ae81ff">1</span>        <span style="color:#75715e">//获取后续多少区块
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> [{                                <span style="color:#75715e">//高度为15的区块对象
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Hash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x33e2cb9.....42e836e3b6b5&#34;</span>,     <span style="color:#75715e">//区块hash        
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Nils&#34;</span><span style="color:#f92672">:</span> [                                 <span style="color:#75715e">//该区块作废UTXO的作废码列表
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;0x020d0....fc504a5&#34;</span>,
+          <span style="color:#e6db74">&#34;0x09f76....fe482a6&#34;</span>,
+          <span style="color:#e6db74">&#34;0xd2d8ff3....c5b4da6&#34;</span>,
+          <span style="color:#e6db74">&#34;0x51991f8....e4380a&#34;</span>
+      ],
+      <span style="color:#e6db74">&#34;Num&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xf&#34;</span>,                             <span style="color:#75715e">//本区块高度
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Outs&#34;</span><span style="color:#f92672">:</span> [                                 <span style="color:#75715e">//该区块新生成的UTXO列表
+</span><span style="color:#75715e"></span>    {                                         <span style="color:#75715e">//第1个UTXO
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Root&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3f89df0c....300e3572d&#34;</span>,      <span style="color:#75715e">//该UTXO的Root
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;State&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Num&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">15</span>,
+              <span style="color:#e6db74">&#34;OS&#34;</span><span style="color:#f92672">:</span> {
+                  <span style="color:#e6db74">&#34;Index&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">15</span>,
+                  <span style="color:#e6db74">&#34;Out_O&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+                  <span style="color:#e6db74">&#34;Out_Z&#34;</span><span style="color:#f92672">:</span> {                                <span style="color:#75715e">//本UTXO是匿名的
+</span><span style="color:#75715e"></span>                      <span style="color:#e6db74">&#34;AssetCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3defeb....fbe1ec80&#34;</span>,
+                      <span style="color:#e6db74">&#34;EInfo&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x218271e....190115c0&#34;</span>,
+                      <span style="color:#e6db74">&#34;OutCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x2920....ad5faa5&#34;</span>,
+                      <span style="color:#e6db74">&#34;PKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xe1f....09b23&#34;</span>,                <span style="color:#75715e">//UTXO指向的收款码 PKr
+</span><span style="color:#75715e"></span>                      <span style="color:#e6db74">&#34;Proof&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x03d8b7e....5c88c2e06&#34;</span>,
+                      <span style="color:#e6db74">&#34;RPK&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x44231e....96841&#34;</span>
+                  },
+          <span style="color:#e6db74">&#34;Out_P&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+          <span style="color:#e6db74">&#34;Out_C&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+              },
+              <span style="color:#e6db74">&#34;TxHash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x482a2....bd0a5c2&#34;</span>
+          }
+      }, 
+    {                                                 <span style="color:#75715e">//第2个UTXO
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Root&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x8d98fe0....fe5bc71f&#34;</span>,
+          <span style="color:#e6db74">&#34;State&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Num&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">15</span>,
+              <span style="color:#e6db74">&#34;OS&#34;</span><span style="color:#f92672">:</span> {
+                  <span style="color:#e6db74">&#34;Index&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">16</span>,
+                  <span style="color:#e6db74">&#34;Out_O&#34;</span><span style="color:#f92672">:</span> {                                   <span style="color:#75715e">//本UTXO是明文的
+</span><span style="color:#75715e"></span>                      <span style="color:#e6db74">&#34;Addr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x7c02a0....ba6ac83a8&#34;</span>,           <span style="color:#75715e">//UTXO指向的收款码 PKr
+</span><span style="color:#75715e"></span>                      <span style="color:#e6db74">&#34;Asset&#34;</span><span style="color:#f92672">:</span> {
+                          <span style="color:#e6db74">&#34;Tkn&#34;</span><span style="color:#f92672">:</span> {
+                              <span style="color:#e6db74">&#34;Currency&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000000....000005345524f&#34;</span>,
+                              <span style="color:#e6db74">&#34;Value&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;1000025000000000000&#34;</span>
+                          },
+                          <span style="color:#e6db74">&#34;Tkt&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+                      },
+                      <span style="color:#e6db74">&#34;Memo&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000....00000000&#34;</span>
+                  },
+                  <span style="color:#e6db74">&#34;Out_Z&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+              },
+              <span style="color:#e6db74">&#34;TxHash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000....00000001&#34;</span>
+          }
+      }
+    ],
+      <span style="color:#e6db74">&#34;Pkgs&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>                                       <span style="color:#75715e">//Package 资产，交易所可以忽略
+</span><span style="color:#75715e"></span>  }],
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<h3 id="获取区块额外信息">
+  获取区块额外信息
+  <a class="anchor" href="#%e8%8e%b7%e5%8f%96%e5%8c%ba%e5%9d%97%e9%a2%9d%e5%a4%96%e4%bf%a1%e6%81%af">#</a>
+</h3>
+<p>本接口可以获取最新的或指定区块的额外信息。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+      <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+      <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+      <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_getBlockByNumber&#34;</span>,
+      <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#ae81ff">15</span>      <span style="color:#75715e">//区块高度，为空则是获取当前最新区块
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {
+    <span style="color:#a6e22e">BlockHash</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x33e2cb....e3b6b5&#34;</span>,               <span style="color:#75715e">//块Hash
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">BlockNumber</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">15</span>,                               <span style="color:#75715e">//块号
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">Timestamp</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1565153901</span>,                         <span style="color:#75715e">//时间戳
+</span><span style="color:#75715e"></span>    <span style="color:#a6e22e">TxHashes</span><span style="color:#f92672">:</span> [<span style="color:#e6db74">&#34;0x482a2....1bd0a5c2&#34;</span>]              <span style="color:#75715e">//交易Hash列表
+</span><span style="color:#75715e"></span>  },
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<h3 id="获取某个utxo详情">
+  获取某个UTXO详情
+  <a class="anchor" href="#%e8%8e%b7%e5%8f%96%e6%9f%90%e4%b8%aautxo%e8%af%a6%e6%83%85">#</a>
+</h3>
+<p>通过UTXO的root获取UTXO详情</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+      <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+      <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+      <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_getOut&#34;</span>,
+      <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0x0x7b30cc8....510fbb122e&#34;</span>      <span style="color:#75715e">//某个UTXO的Root
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {                                    <span style="color:#75715e">//UTXO 详情
+</span><span style="color:#75715e"></span>          <span style="color:#a6e22e">Root</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x7b30cc8....510fbb122e&#34;</span>,            
+          <span style="color:#a6e22e">State</span><span style="color:#f92672">:</span> {
+              <span style="color:#a6e22e">Num</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">28</span>,
+              <span style="color:#a6e22e">OS</span><span style="color:#f92672">:</span> {                            <span style="color:#75715e">//下面的 Out_O/Out_Z/Out_P/Out_C 只会存在一个
+</span><span style="color:#75715e"></span>                  <span style="color:#a6e22e">Index</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">31</span>,
+                  <span style="color:#a6e22e">Out_O</span><span style="color:#f92672">:</span> {                                <span style="color:#75715e">//SUPERZK1.0 明文的Out
+</span><span style="color:#75715e"></span>                      <span style="color:#a6e22e">Addr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x7c02a05...ba6ac83a8&#34;</span>,            <span style="color:#75715e">//收款码PKr的hex编码
+</span><span style="color:#75715e"></span>                      <span style="color:#a6e22e">Asset</span><span style="color:#f92672">:</span> {...},
+                      <span style="color:#a6e22e">Memo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000......0000&#34;</span>
+                  },
+                  <span style="color:#a6e22e">Out_Z</span><span style="color:#f92672">:</span> {                               <span style="color:#75715e">//SUPERZK1.0 密文的Out
+</span><span style="color:#75715e"></span>                      <span style="color:#a6e22e">AssetCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xa2a0f......745a9&#34;</span>,
+                      <span style="color:#a6e22e">EInfo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x68a9e......b74ecfc493&#34;</span>,
+                      <span style="color:#a6e22e">OutCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc90dc......90ff58f&#34;</span>,
+                      <span style="color:#a6e22e">PKr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x9364f11......14406a3&#34;</span>,           <span style="color:#75715e">//收款码PKr的hex编码
+</span><span style="color:#75715e"></span>                      <span style="color:#a6e22e">Proof</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0341d67......f941b0d&#34;</span>,
+                      <span style="color:#a6e22e">RPK</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x6230d4......02b51c2&#34;</span>
+                  },
+          <span style="color:#a6e22e">Out_P</span><span style="color:#f92672">:</span> {                               <span style="color:#75715e">//SUPERZK2.0 明文Out
+</span><span style="color:#75715e"></span>            <span style="color:#a6e22e">Asset</span><span style="color:#f92672">:</span> {...},
+            <span style="color:#a6e22e">Memo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000....000000&#34;</span>,
+            <span style="color:#a6e22e">PKr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x77305....6bce36e&#34;</span>                 <span style="color:#75715e">//收款码PKr的hex编码
+</span><span style="color:#75715e"></span>          },
+          <span style="color:#a6e22e">Out_C</span><span style="color:#f92672">:</span> {                               <span style="color:#75715e">//SUPERZK2.0 密文Out
+</span><span style="color:#75715e"></span>            <span style="color:#a6e22e">AssetCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xd3be8490....12904aa09&#34;</span>,
+            <span style="color:#a6e22e">EInfo</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xd42e33....b46e1cd3&#34;</span>,
+          <span style="color:#a6e22e">PKr</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xcc0c3b71....d7fcbd3&#34;</span>,            <span style="color:#75715e">//收款码PKr的hex编码
+</span><span style="color:#75715e"></span>            <span style="color:#a6e22e">Proof</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x02a04a89....ede4dca72f&#34;</span>,
+            <span style="color:#a6e22e">RPK</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x855ba....352e88021&#34;</span>
+          },
+                  <span style="color:#a6e22e">RootCM</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xff107b......ebdae30a2&#34;</span>
+              },
+              <span style="color:#a6e22e">TxHash</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x921b8......be44829&#34;</span>           <span style="color:#75715e">//交易Hash
+</span><span style="color:#75715e"></span>          }
+      },
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<h3 id="获取原始交易详情">
+  获取原始交易详情
+  <a class="anchor" href="#%e8%8e%b7%e5%8f%96%e5%8e%9f%e5%a7%8b%e4%ba%a4%e6%98%93%e8%af%a6%e6%83%85">#</a>
+</h3>
+<p>通过交易hash获取原始交易报文，即签名后的交易结构，这个交易结构不可作为最后入账的依据。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+      <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+      <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+      <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_getTx&#34;</span>,
+      <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0x482a2f......1bd0a5c2&#34;</span>      <span style="color:#75715e">//某个交易的hash
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {                                     <span style="color:#75715e">//原始交易信息
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Gas&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x15f90&#34;</span>,
+      <span style="color:#e6db74">&#34;GasPrice&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3b9aca00&#34;</span>,
+      <span style="color:#e6db74">&#34;Hash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x482a2......d0a5c2&#34;</span>,
+      <span style="color:#e6db74">&#34;Tx&#34;</span><span style="color:#f92672">:</span> {
+          <span style="color:#e6db74">&#34;Bcr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3334c5......9ffe532e&#34;</span>,
+          <span style="color:#e6db74">&#34;Bsign&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xa9045b3......03d3c4503&#34;</span>,
+          <span style="color:#e6db74">&#34;Desc_Cmd&#34;</span><span style="color:#f92672">:</span> {                               <span style="color:#75715e">//执行命令描述，交易所可忽略
+</span><span style="color:#75715e"></span>              <span style="color:#e6db74">&#34;BuyShare&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+              <span style="color:#e6db74">&#34;ClosePool&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+              <span style="color:#e6db74">&#34;Contract&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+              <span style="color:#e6db74">&#34;RegistPool&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+          },
+          <span style="color:#e6db74">&#34;Desc_O&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Ins&#34;</span><span style="color:#f92672">:</span> [{                                 <span style="color:#75715e">//明文的输入
+</span><span style="color:#75715e"></span>                  <span style="color:#e6db74">&#34;Nil&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x020d0......c504a5&#34;</span>,
+                  <span style="color:#e6db74">&#34;Root&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x09f765......5fe482a6&#34;</span>,
+                  <span style="color:#e6db74">&#34;Sign&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xcde0ef......c05e1b3b02&#34;</span>
+              }],
+              <span style="color:#e6db74">&#34;Outs&#34;</span><span style="color:#f92672">:</span> []                                <span style="color:#75715e">//明文输出，只用于智能合约，交易所忽略
+</span><span style="color:#75715e"></span>          },
+          <span style="color:#e6db74">&#34;Desc_Pkg&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Close&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+              <span style="color:#e6db74">&#34;Create&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+              <span style="color:#e6db74">&#34;Transfer&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+          },
+          <span style="color:#e6db74">&#34;Desc_Z&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Ins&#34;</span><span style="color:#f92672">:</span> [],                                   <span style="color:#75715e">//密文输入
+</span><span style="color:#75715e"></span>              <span style="color:#e6db74">&#34;Outs&#34;</span><span style="color:#f92672">:</span> [{                                   <span style="color:#75715e">//密文输出
+</span><span style="color:#75715e"></span>                  <span style="color:#e6db74">&#34;AssetCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3defeb7......afbe1ec80&#34;</span>,
+                  <span style="color:#e6db74">&#34;EInfo&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x218271ed71......4190115c0&#34;</span>,
+                  <span style="color:#e6db74">&#34;OutCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x29201d......1ad5faa5&#34;</span>,
+                  <span style="color:#e6db74">&#34;PKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xe1f915......f09b23&#34;</span>,
+                  <span style="color:#e6db74">&#34;Proof&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x03d8b......8c2e06&#34;</span>,
+                  <span style="color:#e6db74">&#34;RPK&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x44231......f196841&#34;</span>
+              }]
+          },
+          <span style="color:#e6db74">&#34;Ehash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xe0624......fb4b00c&#34;</span>,
+          <span style="color:#e6db74">&#34;Fee&#34;</span><span style="color:#f92672">:</span> {                                           <span style="color:#75715e">//手续费
+</span><span style="color:#75715e"></span>              <span style="color:#e6db74">&#34;Currency&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000......00005345524f&#34;</span>,       <span style="color:#75715e">//币种，可以用local_hexToCurrency翻译
+</span><span style="color:#75715e"></span>              <span style="color:#e6db74">&#34;Value&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;90000000000000&#34;</span>                        <span style="color:#75715e">//金额
+</span><span style="color:#75715e"></span>          },
+          <span style="color:#e6db74">&#34;From&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3fb451......42be2a0&#34;</span>,                   <span style="color:#75715e">//发送方收款码，也是多余gas退回的地址。
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Sign&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x5fdd91......d98405&#34;</span><span style="color:#960050;background-color:#1e0010">，</span>
+      <span style="color:#e6db74">&#34;Tx1&#34;</span><span style="color:#f92672">:</span> {                                     <span style="color:#75715e">//SuperZK2.0 交易内容
+</span><span style="color:#75715e"></span>        <span style="color:#e6db74">&#34;Ins_C&#34;</span><span style="color:#f92672">:</span> [{...}],                          <span style="color:#75715e">//密文输入
+</span><span style="color:#75715e"></span>        <span style="color:#e6db74">&#34;Ins_P&#34;</span><span style="color:#f92672">:</span> [],                               <span style="color:#75715e">//明文输入
+</span><span style="color:#75715e"></span>        <span style="color:#e6db74">&#34;Ins_P0&#34;</span><span style="color:#f92672">:</span> [],                              <span style="color:#75715e">//SuperZK1.0-2.0转换输入
+</span><span style="color:#75715e"></span>        <span style="color:#e6db74">&#34;Outs_C&#34;</span><span style="color:#f92672">:</span> [{...}],                         <span style="color:#75715e">//密文输出
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Outs_P&#34;</span><span style="color:#f92672">:</span> [{...}]                          <span style="color:#75715e">//明文输出
+</span><span style="color:#75715e"></span>      }
+      }
+  },
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<h3 id="获取交易收据">
+  获取交易收据
+  <a class="anchor" href="#%e8%8e%b7%e5%8f%96%e4%ba%a4%e6%98%93%e6%94%b6%e6%8d%ae">#</a>
+</h3>
+<p>获取交易的结果，如果请求成功，说明交易已经成功打包进区块。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+      <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+      <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+      <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_getTxReceipt&#34;</span>,
+      <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+      <span style="color:#e6db74">&#34;0x482a2f......1bd0a5c2&#34;</span>      <span style="color:#75715e">//某个交易的hash
+</span><span style="color:#75715e"></span>    ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {
+      <span style="color:#a6e22e">BHash</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x33e2cb......e836e3b6b5&#34;</span>,          <span style="color:#75715e">//打包区块Hash
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">BNum</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">15</span>,                                   <span style="color:#75715e">//打包区块高度
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">Nils</span><span style="color:#f92672">:</span> [                                     <span style="color:#75715e">//交易的作废码列表
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0x09f765a......d55fe482a6&#34;</span>,
+      <span style="color:#e6db74">&#34;0x51991f8e......6fe2dfe4380a&#34;</span>
+    ],
+      <span style="color:#a6e22e">Outs</span><span style="color:#f92672">:</span> [                                     <span style="color:#75715e">//交易生成的UTXO的Root列表
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;0x3f89df0c......e14a300e3572d&#34;</span>, 
+      <span style="color:#e6db74">&#34;0x3f9e217......94fdabde70a7&#34;</span>, 
+      <span style="color:#e6db74">&#34;0x1d87a74a3......2d725144d6cd15&#34;</span>
+    ],
+      <span style="color:#a6e22e">Pkgs</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+      <span style="color:#a6e22e">PoolId</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+      <span style="color:#a6e22e">ShareId</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+      <span style="color:#a6e22e">State</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1</span>,                                    <span style="color:#75715e">//智能合约运行是否成功
+</span><span style="color:#75715e"></span>      <span style="color:#a6e22e">TxHash</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x482a2f219d......a11bd0a5c2&#34;</span>       <span style="color:#75715e">//交易Hash
+</span><span style="color:#75715e"></span>  },
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<h3 id="组装交易签名参数">
+  组装交易签名参数
+  <a class="anchor" href="#%e7%bb%84%e8%a3%85%e4%ba%a4%e6%98%93%e7%ad%be%e5%90%8d%e5%8f%82%e6%95%b0">#</a>
+</h3>
+<p>对接人需要自己选择要使用的UTXO来组装交易，组装时需要在线提供跟踪秘钥TK，<code>flight_genTxParam</code>方法会获取当前区块见证，并自动产生找零的Out来配平交易的金额。输出的结果可以用<code>local_signTxWithSk</code>进行签名。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+  <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_genTxParam&#34;</span>,
+  <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [{    <span style="color:#75715e">//参数1：预组装交易结构
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;From&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb8d01......143099&#34;</span>,           <span style="color:#75715e">//找零收款码PKr，需要与TK配套。
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Gas&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">25000</span>,                            <span style="color:#75715e">//最大Gas消耗
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;GasPrice&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">1000000000</span>,                  <span style="color:#75715e">//Gas价格，最小为1Gta
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Ins&#34;</span><span style="color:#f92672">:</span> [<span style="color:#e6db74">&#34;0x7b30c......0fbb122e&#34;</span>],        <span style="color:#75715e">//输入UTXO的Root列表，需要确保是TK下面的UTXO。
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Outs&#34;</span><span style="color:#f92672">:</span> [{                               <span style="color:#75715e">//输出
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Asset&#34;</span><span style="color:#f92672">:</span> {                             <span style="color:#75715e">//资产对象
+</span><span style="color:#75715e"></span>              <span style="color:#e6db74">&#34;Tkn&#34;</span><span style="color:#f92672">:</span> {                                     <span style="color:#75715e">//Token对象（同质化通证）
+</span><span style="color:#75715e"></span>                  <span style="color:#e6db74">&#34;Currency&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000......005345524f&#34;</span>,     <span style="color:#75715e">//币种Id，去掉0之后就是ASCII字符串 &#34;ZORRO&#34;
+</span><span style="color:#75715e"></span>                  <span style="color:#e6db74">&#34;Value&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;500000000000000000&#34;</span>              <span style="color:#75715e">//币种金额
+</span><span style="color:#75715e"></span>              }
+          },
+          <span style="color:#e6db74">&#34;PKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3b78d......4603daa&#34;</span>          <span style="color:#75715e">//输出的收款码PKr
+</span><span style="color:#75715e"></span>      }]
+  },
+  <span style="color:#e6db74">&#34;tu1nEPY......As8Ht4z&#34;</span>   <span style="color:#75715e">//参数2：跟踪秘钥TK
+</span><span style="color:#75715e"></span>  ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> {
+      <span style="color:#e6db74">&#34;Cmds&#34;</span><span style="color:#f92672">:</span> {                                <span style="color:#75715e">//交易命令
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;BuyShare&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+          <span style="color:#e6db74">&#34;ClosePool&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+          <span style="color:#e6db74">&#34;Contract&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+          <span style="color:#e6db74">&#34;PkgClose&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+          <span style="color:#e6db74">&#34;PkgCreate&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+          <span style="color:#e6db74">&#34;PkgTransfer&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+          <span style="color:#e6db74">&#34;RegistPool&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+      },
+      <span style="color:#e6db74">&#34;Fee&#34;</span><span style="color:#f92672">:</span> {                                <span style="color:#75715e">//交易费用
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Currency&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000......0005345524f&#34;</span>,
+          <span style="color:#e6db74">&#34;Value&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;25000000000000&#34;</span>
+      },
+      <span style="color:#e6db74">&#34;From&#34;</span><span style="color:#f92672">:</span> {                               <span style="color:#75715e">//Gas找回收款码PKr
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;PKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb8d018f2......58143099&#34;</span>,
+          <span style="color:#e6db74">&#34;SKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000......00000&#34;</span>
+      },
+      <span style="color:#e6db74">&#34;Gas&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">25000</span>,                           <span style="color:#75715e">//最大gas消耗
+</span><span style="color:#75715e"></span>    <span style="color:#e6db74">&#34;GasPrice&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">100000000</span>,                  <span style="color:#75715e">//Gas价格
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Ins&#34;</span><span style="color:#f92672">:</span> [{                               <span style="color:#75715e">//输入列表
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Out&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Root&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x7b30cc81......10fbb122e&#34;</span>,
+              <span style="color:#e6db74">&#34;State&#34;</span><span style="color:#f92672">:</span> {
+                  <span style="color:#e6db74">&#34;Num&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">28</span>,
+                  <span style="color:#e6db74">&#34;OS&#34;</span><span style="color:#f92672">:</span> {
+                      <span style="color:#e6db74">&#34;Index&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">31</span>,
+                      <span style="color:#e6db74">&#34;OutCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+                      <span style="color:#e6db74">&#34;Out_O&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+                      <span style="color:#e6db74">&#34;Out_Z&#34;</span><span style="color:#f92672">:</span> {
+                          <span style="color:#e6db74">&#34;AssetCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xa2a0f0......03745a9&#34;</span>,
+                          <span style="color:#e6db74">&#34;EInfo&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x68a9ed......cfc493&#34;</span>,
+                          <span style="color:#e6db74">&#34;OutCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xc90dc......0ff58f&#34;</span>,
+                          <span style="color:#e6db74">&#34;PKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x9364f......4406a3&#34;</span>,
+                          <span style="color:#e6db74">&#34;Proof&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0341d6......57f941b0d&#34;</span>,
+                          <span style="color:#e6db74">&#34;RPK&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x6230d427......02b51c2&#34;</span>
+                      },
+                      <span style="color:#e6db74">&#34;RootCM&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xff107b......dae30a2&#34;</span>
+                  },
+                  <span style="color:#e6db74">&#34;TxHash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x921b8......e44829&#34;</span>
+              }
+          },
+          <span style="color:#e6db74">&#34;SKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000......000000&#34;</span>,
+          <span style="color:#e6db74">&#34;Witness&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Anchor&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xde09cc......463503&#34;</span>,
+              <span style="color:#e6db74">&#34;Paths&#34;</span><span style="color:#f92672">:</span> [
+          <span style="color:#e6db74">&#34;0x1777ebb......b3cf9c2c&#34;</span>, 
+          ......
+          <span style="color:#e6db74">&#34;0x3edc6......be382&#34;</span>
+        ],
+              <span style="color:#e6db74">&#34;Pos&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x1f&#34;</span>
+          }
+      }],
+      <span style="color:#e6db74">&#34;Outs&#34;</span><span style="color:#f92672">:</span> [{                                <span style="color:#75715e">//输出列表
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Asset&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Tkn&#34;</span><span style="color:#f92672">:</span> {
+                  <span style="color:#e6db74">&#34;Currency&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000000......000005345524f&#34;</span>,
+                  <span style="color:#e6db74">&#34;Value&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;500000000000000000&#34;</span>
+              },
+              <span style="color:#e6db74">&#34;Tkt&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+          },
+          <span style="color:#e6db74">&#34;Memo&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x00000000......0000000000&#34;</span>,
+          <span style="color:#e6db74">&#34;PKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3b78dd......4603daa&#34;</span>
+      }, {                                     <span style="color:#75715e">//自动配平的找零输出
+</span><span style="color:#75715e"></span>          <span style="color:#e6db74">&#34;Asset&#34;</span><span style="color:#f92672">:</span> {
+              <span style="color:#e6db74">&#34;Tkn&#34;</span><span style="color:#f92672">:</span> {
+                  <span style="color:#e6db74">&#34;Currency&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000......00005345524f&#34;</span>,
+                  <span style="color:#e6db74">&#34;Value&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;499975000000000000&#34;</span>
+              },
+              <span style="color:#e6db74">&#34;Tkt&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+          },
+          <span style="color:#e6db74">&#34;Memo&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x0000000......0000000&#34;</span>,
+          <span style="color:#e6db74">&#34;PKr&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0xb8d018......143099&#34;</span>
+      }]
+  },
+  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>
+}
+</code></pre></div></li>
+</ul>
+<h3 id="广播交易">
+  广播交易
+  <a class="anchor" href="#%e5%b9%bf%e6%92%ad%e4%ba%a4%e6%98%93">#</a>
+</h3>
+<p>在调用<code>local_signTxWithSk</code>进行签名之后，输出的交易可以调用<code>flight_commitTx</code>广播到全网。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+  <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_commitTx&#34;</span>,
+  <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [{    <span style="color:#75715e">//local_signTxWithSk的输出
+</span><span style="color:#75715e"></span>      <span style="color:#e6db74">&#34;Gas&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x61a8&#34;</span>,
+      <span style="color:#e6db74">&#34;GasPrice&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x3b9aca00&#34;</span>,
+      <span style="color:#e6db74">&#34;Hash&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x813f69b7d60fe694ddfd6bec36e2adcba773a4518ee02354bd8f2f339f004a2e&#34;</span>,
+      <span style="color:#e6db74">&#34;Tx&#34;</span><span style="color:#f92672">:</span> {...}
+  }]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,    <span style="color:#75715e">//成功返回null
+</span><span style="color:#75715e"></span>  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+}
+</code></pre></div></li>
+</ul>
+<h3 id="通过-tk-和-trace-提取对应的root">
+  通过 TK 和 Trace 提取对应的Root
+  <a class="anchor" href="#%e9%80%9a%e8%bf%87-tk-%e5%92%8c-trace-%e6%8f%90%e5%8f%96%e5%af%b9%e5%ba%94%e7%9a%84root">#</a>
+</h3>
+<p>在交易签名的时候，会为每个In_Z或者In_C中的In生成一个Base，通过Base、Trace/NIL、TK三个值用<code>flight_trace2Root</code>可以提取该In对应的UTXO的Root。</p>
+<ul>
+<li>
+<p>request</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;jsonrpc&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;2.0&#34;</span>,
+  <span style="color:#e6db74">&#34;method&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;flight_trace2Root&#34;</span>,
+  <span style="color:#e6db74">&#34;params&#34;</span><span style="color:#f92672">:</span> [
+    <span style="color:#e6db74">&#34;0xbb793767f......070f62f05&#34;</span>,  <span style="color:#75715e">//TK 跟踪秘钥
+</span><span style="color:#75715e"></span>    <span style="color:#e6db74">&#34;0x0207f1a29......e7652eda1&#34;</span>,  <span style="color:#75715e">//Trace 原始Desc_Z.Ins 中的Trace字段
+</span><span style="color:#75715e"></span>    <span style="color:#e6db74">&#34;0x000000000......000000000&#34;</span>   <span style="color:#75715e">//签名之后对应的Base值
+</span><span style="color:#75715e"></span>  ]
+}
+</code></pre></div></li>
+<li>
+<p>response</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-javascript" data-lang="javascript">{
+  <span style="color:#e6db74">&#34;id&#34;</span><span style="color:#f92672">:</span> <span style="color:#ae81ff">0</span>,
+  <span style="color:#e6db74">&#34;result&#34;</span><span style="color:#f92672">:</span> <span style="color:#e6db74">&#34;0x51182a6775......f07d1e49a095&#34;</span>,    <span style="color:#75715e">//Root值
+</span><span style="color:#75715e"></span>  <span style="color:#e6db74">&#34;error&#34;</span><span style="color:#f92672">:</span> <span style="color:#66d9ef">null</span>,
+}
+</code></pre></div></li>
+</ul>
+</article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      
+  <nav id="TableOfContents">
+  <ul>
+    <li><a href="#对接方案">对接方案</a></li>
+    <li><a href="#local-接口">Local 接口</a>
+      <ul>
+        <li><a href="#账户管理">账户管理</a></li>
+        <li><a href="#utxo解析">UTXO解析</a></li>
+        <li><a href="#离线签名">离线签名</a></li>
+        <li><a href="#确认out_z">确认Out_Z</a></li>
+        <li><a href="#确认out_c">确认Out_C</a></li>
+        <li><a href="#币名接口">币名接口</a></li>
+      </ul>
+    </li>
+    <li><a href="#flight-接口">Flight 接口</a>
+      <ul>
+        <li><a href="#扫描区块">扫描区块</a></li>
+        <li><a href="#获取区块额外信息">获取区块额外信息</a></li>
+        <li><a href="#获取某个utxo详情">获取某个UTXO详情</a></li>
+        <li><a href="#获取原始交易详情">获取原始交易详情</a></li>
+        <li><a href="#获取交易收据">获取交易收据</a></li>
+        <li><a href="#组装交易签名参数">组装交易签名参数</a></li>
+        <li><a href="#广播交易">广播交易</a></li>
+        <li><a href="#通过-tk-和-trace-提取对应的root">通过 TK 和 Trace 提取对应的Root</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+ 
+    </aside>
+    
+  </main>
+
+  
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

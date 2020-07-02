@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>轻松入门 on ZORRO</title>
+    <link>https://Ethan-91.github.com/docs/introduction/</link>
+    <description>Recent content in 轻松入门 on ZORRO</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	<atom:link href="https://Ethan-91.github.com/docs/introduction/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>源码编译</title>
+      <link>https://Ethan-91.github.com/docs/introduction/build-from-sourcecoude/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/introduction/build-from-sourcecoude/</guid>
+      <description>从源码编译开始# 本机环境#ubuntu16.04 / go1.13.11
+1. 安装依赖库，获取源码# apt-get install -y build-essential apt-get install libboost-all-dev apt-get install libgmp-dev go env -w GO111MODULE=off cd $GOPATH/src/github.com mkdir ZorroChain cd ZorroChain git clone https://github.com/ZorroChain/zorro.git 2. 设置动态库加载路径#  windows  # cmd: set path=%path%;%gopath%\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64 # powershell: $env:path=$env:path+&amp;#34;;&amp;#34;+$env:gopath+&amp;#34;\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64&amp;#34;  mac  export DYLD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_DARWIN_AMD64  linux  # Linux内核版本v3: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V3 # Linux内核版本v4: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V4 3. 编译# cd zorro go install .</description>
+    </item>
+    
+    <item>
+      <title>控制台操作</title>
+      <link>https://Ethan-91.github.com/docs/introduction/operate-in-console/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/introduction/operate-in-console/</guid>
+      <description>控制台基础操作# 本机环境#ubuntu16.04 / go1.13.11
+1. 启动控制台# zro --exchange --mineMode --stake --rpc --rpcaddr=&amp;#34;0.0.0.0&amp;#34; --dashboard --vmodule=dashboard=5 --rpcvhosts=&amp;#34;*&amp;#34; --rpccorsdomain=&amp;#34;*&amp;#34; --rpcapi=&amp;#34;exchange,zorro,net,stake&amp;#34; --exchangeValueStr zro attach 2. 账户管理# 创建账户指令#&amp;gt; personal.newAccount(&amp;#34;[PASSWORD]&amp;#34;) ... &amp;#34;[PK]&amp;#34; 其中 [PASSWORD] 是这个账户的密码，因为Zro不会直接存储用户的私钥，当5分钟没有任何操作，账户会被锁定，这时要用该账户进行转账，则需要用此密码对账户解锁。创建用户指令会返回该用户公钥。这个公钥可以作为转账地址。
+查看所有公钥#&amp;gt; zorro.accounts ... [&amp;#34;[PK0]&amp;#34;,&amp;#34;[PK1]&amp;#34;,...,&amp;#34;[PKn]&amp;#34;] 这个属性返回当前钱包中所有账户的公钥。
+解锁账户#&amp;gt; personal.unlockAccount(&amp;#34;[PK]&amp;#34;,&amp;#34;[PASSWORD]&amp;#34;) 其中[PK]是该用户公钥
+获取账户资产余额#&amp;gt; zorro.getBalance(&amp;#34;[PK]&amp;#34;) ... {tkn:{...},tkt:{...}} 其中tkn按分类显示账户所有Token余额，tkt按分类显示账户所有持有的Ticket。
+3. 挖矿# 启动挖矿#&amp;gt; miner.</description>
+    </item>
+    
+  </channel>
+</rss>

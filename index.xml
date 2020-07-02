@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ZORRO是什么？ on ZORRO</title>
+    <link>https://Ethan-91.github.com/</link>
+    <description>Recent content in ZORRO是什么？ on ZORRO</description>
+    <generator>Hugo -- gohugo.io</generator>
+    
+	<atom:link href="https://Ethan-91.github.com/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>NODE对接(SI接口说明)</title>
+      <link>https://Ethan-91.github.com/docs/course/service-interface/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/course/service-interface/</guid>
+      <description>Service Interface (SI) 接口说明# Zro上开放了SI服务，使得第三方可以通过rpc/web3连接Zro，获得无状态的公链服务。
+SI的使用方式是不维护第三方创建的公私钥，因此，第三方需要自己创建存储公私钥，并在需要的时候提供给SI。
+CreateKr# 创建公私钥对
+ Request   {&amp;quot;id&amp;quot;:0,&amp;quot;jsonrpc&amp;quot;:&amp;quot;2.0&amp;quot;,&amp;quot;method&amp;quot;:&amp;quot;ssi_createKr&amp;quot;,&amp;quot;params&amp;quot;:null} Successful Response   {&amp;quot;SKr&amp;quot;:&amp;quot;0x5bf7d....a0016&amp;quot;, //私钥&amp;quot;PKr&amp;quot;:&amp;quot;0x904bb....09baa&amp;quot; //公钥} szkCreateKr 生成 SuperZK2.0 协议账户  GetBlocksInfo# 用来主动同步区块数据
+ Request   {&amp;quot;id&amp;quot;:0,&amp;quot;jsonrpc&amp;quot;:&amp;quot;2.0&amp;quot;,&amp;quot;method&amp;quot;:&amp;quot;ssi_getBlocksInfo&amp;quot;,&amp;quot;params&amp;quot;:[&amp;quot;0x0&amp;quot;, //起始块&amp;quot;0x5&amp;quot; //最多获取多少个块]} Successful Response   [{&amp;quot;Num&amp;quot;:&amp;quot;0x0&amp;quot;, //块号&amp;quot;Hash&amp;quot;:&amp;quot;0x2472...2003&amp;quot; //Block Hash&amp;quot;Outs&amp;quot;:[{&amp;quot;Hash&amp;quot;:&amp;quot;0x.</description>
+    </item>
+    
+    <item>
+      <title>源码编译</title>
+      <link>https://Ethan-91.github.com/docs/introduction/build-from-sourcecoude/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/introduction/build-from-sourcecoude/</guid>
+      <description>从源码编译开始# 本机环境#ubuntu16.04 / go1.13.11
+1. 安装依赖库，获取源码# apt-get install -y build-essential apt-get install libboost-all-dev apt-get install libgmp-dev go env -w GO111MODULE=off cd $GOPATH/src/github.com mkdir ZorroChain cd ZorroChain git clone https://github.com/ZorroChain/zorro.git 2. 设置动态库加载路径#  windows  # cmd: set path=%path%;%gopath%\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64 # powershell: $env:path=$env:path+&amp;#34;;&amp;#34;+$env:gopath+&amp;#34;\src\github.com\ZorroChain\zorro\czk\czero\lib_WINDOWS_AMD64&amp;#34;  mac  export DYLD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_DARWIN_AMD64  linux  # Linux内核版本v3: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V3 # Linux内核版本v4: export LD_LIBRARY_PATH=$GOPATH/src/github.com/ZorroChain/zorro/czk/czero/lib_LINUX_AMD64_V4 3. 编译# cd zorro go install .</description>
+    </item>
+    
+    <item>
+      <title>WALLET对接(EI接口说明)</title>
+      <link>https://Ethan-91.github.com/docs/course/exchange-interface/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/course/exchange-interface/</guid>
+      <description>Exchange Interface (EI) 接口说明# EI 接口的对接方式，exchange服务代管用户的 TK，负责追踪用户的 UTXO ，并提供在线和离线的签名方式。 对比 SI 接口需要对接方自己管理 UTXO，SEI 更加简单、安全、实用。
+请对接用户注意，并认真阅读本文
+  因为Seed-&amp;gt;SK-&amp;gt;TK-&amp;gt;PK是一一对应的，一个PK可以通过随机数对应非常多的PKr。
+  每个用户通过随机数关联到不同的PKr，再关联到一个唯一的PK上，不需要为每个用户生成一个Seed。
+  请经常对账户的UTXO进行Merge，否则转账时过多的UTXO导致签名时间过长，将严重影响用户体验。
+  账户# 账户由 Seed、SK、TK、PK、PKr 四种密钥构成，生成关系于下：
+seed(种子) -&amp;gt; sk(私钥) -&amp;gt; TK(跟踪密钥) -&amp;gt; PK(公钥) -&amp;gt; PKr(收款码)seed(种子)# seed 是32长度的BYTE数组，可以由HASH算法或者助记词生成。拥有了 seed 就可以推出后续所有的密钥，因此必须绝对安全保存。  sk(私钥)# 私钥sk一共64个BYTE，由两个32BYTE的大整数组成，并且与 seed 一一对应。  sk=(zsk,vsk) \;\;zsk \in Fr, \; vsk \in Fr    私钥用来对交易签名，也需要绝对安全保存。 可以由 seed 生成出来 Go语言  cpt.</description>
+    </item>
+    
+    <item>
+      <title>控制台操作</title>
+      <link>https://Ethan-91.github.com/docs/introduction/operate-in-console/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/introduction/operate-in-console/</guid>
+      <description>控制台基础操作# 本机环境#ubuntu16.04 / go1.13.11
+1. 启动控制台# zro --exchange --mineMode --stake --rpc --rpcaddr=&amp;#34;0.0.0.0&amp;#34; --dashboard --vmodule=dashboard=5 --rpcvhosts=&amp;#34;*&amp;#34; --rpccorsdomain=&amp;#34;*&amp;#34; --rpcapi=&amp;#34;exchange,zorro,net,stake&amp;#34; --exchangeValueStr zro attach 2. 账户管理# 创建账户指令#&amp;gt; personal.newAccount(&amp;#34;[PASSWORD]&amp;#34;) ... &amp;#34;[PK]&amp;#34; 其中 [PASSWORD] 是这个账户的密码，因为Zro不会直接存储用户的私钥，当5分钟没有任何操作，账户会被锁定，这时要用该账户进行转账，则需要用此密码对账户解锁。创建用户指令会返回该用户公钥。这个公钥可以作为转账地址。
+查看所有公钥#&amp;gt; zorro.accounts ... [&amp;#34;[PK0]&amp;#34;,&amp;#34;[PK1]&amp;#34;,...,&amp;#34;[PKn]&amp;#34;] 这个属性返回当前钱包中所有账户的公钥。
+解锁账户#&amp;gt; personal.unlockAccount(&amp;#34;[PK]&amp;#34;,&amp;#34;[PASSWORD]&amp;#34;) 其中[PK]是该用户公钥
+获取账户资产余额#&amp;gt; zorro.getBalance(&amp;#34;[PK]&amp;#34;) ... {tkn:{...},tkt:{...}} 其中tkn按分类显示账户所有Token余额，tkt按分类显示账户所有持有的Ticket。
+3. 挖矿# 启动挖矿#&amp;gt; miner.</description>
+    </item>
+    
+    <item>
+      <title>Flight接口说明</title>
+      <link>https://Ethan-91.github.com/docs/course/flight-interface/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/course/flight-interface/</guid>
+      <description>Flight Interface (FI) 接口说明# FI接口是SI的升级版，支持jsonrpc和console调用，并支持以下特点：
+ zro不维护任何秘钥 提供离线签名方案 用户自主管理UTXO 分为离线接口(local)和在线接口(flight)  对接方案# 账户方案(离线)  在线下生成随机的32byte的seed (可以通过local_genSeed接口生成) 通过local_seed2Sk生成一个私钥sk离线保存。 通过local_sk2Tk生成一个跟踪秘钥 TK提供给在线部分系统。 通过local_tk2Pk生成一个公钥PK，提供给在线部分系统。 通过local_pk2Pkr以及随机数，为每一个用户绑定一个收款码PKr。   充值检测方案(在线)  不断迭代的调用flight_getBlocksInfo获取区块信息 判断block.Outs[i].State.OS.Out_O.Addr或者block.Outs[i].State.OS.Out_Z.PKr是否属于绑定用户。  如果属于绑定用户做下面几个事情  将block.Outs[i]以及跟踪秘钥TK作为参数调用local_decOut解出明文的UTXO数据 从解出的UTXO数据获取作废码列表Nils 将UTXO和Nils关联保存 将UTXO的资产数据入账     判断作废码block.Nils是否已经存在于之前保存的UTXO表中，如果存在，表明这个UTXO已经被用掉。   发送交易（在线和离线）  选择需要转账的UTXO以及相关转账信息构造的参数调用flight_genTxParam，生成txParam。 以txParam和私钥sk为参数调用离线签名方法local_signTxWithSk，生成待广播tx，并记录txhash。 记录local_signTxWithSk的结果中的keys。 以tx为参数调用flight_commitTx广播到全网。 不断的以txhash为参数调用flight_getTxReceipt,获取到打包块号。 确认32个块之后，还能从flight_getTxReceipt获取到数据则为成功交易。 遇到纠纷的时候，可以拿出keys，调用local_confirmOutZ来解出明文数据。    Local 接口#local 接口是离线性质的jsonrpc接口，虽然需要启动zro程序，但是除了rpc服务，zro不需要对外连接和同步数据。因此可以采用下面的参数启动zro服务。
+./zro --offline --mineMode --datadir ~/zroData --nodiscover --rpc --rpcport 8545 --rpcapi local,zorro --rpcaddr 127.</description>
+    </item>
+    
+    <item>
+      <title>匿名Token发行原理</title>
+      <link>https://Ethan-91.github.com/docs/course/principle-of-anonymous-token/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/course/principle-of-anonymous-token/</guid>
+      <description>匿名Token发行原理# ZORRO是全球首个支持图灵完备智能合约的隐私区块链系统，既然是支持智能合约，当然不可能是简单的智能合约+匿名币。ZORRO深度整合了两者的优点：智能合约的开放性、隐私系统的封闭性。在这两种特性的支持下，ZORRO的智能合约具有非常令人兴奋的特性，可以做到一些神奇的事情。
+本文主要讲解ZORRO提供的 匿名 Token API 在智能合约的应用，并在开篇简要的介绍一下匿名Token的生成原理。
+一、UTXO和ACCOUNT# 了解区块链构成的读者应该都知道，区块链是一个分布式账本，每个账本包含多笔交易Tx，而每笔交易又包含有多个记录。账本最小的单位是记录，每一笔帐记录一个账户资产的流入或者流出。但从实际的实现方式看，根据资产流出记录方式的不同，区块链系统演化出两种不同的记账实现，我们分别称之为UTXO模式和ACCOUNT模式。这两种模式分别对应比特币和以太坊的模式。而ZORRO则采用更为复杂的混合模式。
+基于UTXO的交易#如上图，UTXO模式的记录有两种，对交易发起者来说就是Input和Output，这个Output在交易接受方看来就是未花费输出(UTXO)，直到交易接受者再发起一个交易，指定一个Input将这个UTXO作废掉。交易中的记录始终在链接各种输入和输出。在这种模式下，ACCOUNT作为一种状态摘要，不是必须的。
+例如在上图中，Alice之前收到过一个交易Tx 0，这笔交易有一个输出UTXO 0，UTXO 0中有V个ZORRO币，她的账户上可以记录 [+V ZORRO,BALANCE=V]。而之后她将这V个ZORRO币转给Bob，那么她生成一个交易Tx 1，这个交易有一个Input将UTXO 0作废掉，那么Alice的ACCOUNT就应该记录[-V ZORRO,BALANCE=0]。而对于Bob，他就增加了一个价值为V个ZORRO的UTXO 1，如果他的ACCOUNT之前的BALANCE是0，它账户上就可以记录[+V ZORRO,BALANCE=V]。
+这种模式有两个优点：
+ UTXO模式每笔交易是相互独立的，这意味着只要能处理好双花的问题，一个账户下的交易都可以并行处理，能充分应用多核CPU的能力。 UTXO本质上来说就是基于历史的记录形式，既是过程，也是结果，因此在一些需要生成见证证明的应用场合下，具有非常大的优势。这也是为什么具有隐私特性的区块链系统基本都是UTXO模式的。  基于ACCOUNT的交易#之前UTXO模式说到了每个账户可以生成一个临时的ACCOUNT作为状态摘要，在UTXO模式中，这个账户是临时的，不是必须的。而ACCOUNT模式中，交易中的每个资产流入流出记录都引用ACCOUNT而不是UTXO，记录Input表示增加这个ACCOUNT的资产，而记录Output表示减少一个账户的资产。在这种模式下，ACCOUNT实体是必须的，没有这个ACCOUNT，所有的记录都没有了意义。
+跟上面一样，例如，Alice之前收到过一个交易Tx 0，这个交易有一个资产值为V个ZORRO的输出Output 0，她的ACCOUNT将增加V个ZORRO。这时她要给Bob转出V个ZORRO币，那么她发起一笔交易，交易的Input指向她的ACCOUNT，价值为V ZORRO币，Output 1指向Bob的ACCOUNT，价值也是V ZORRO币，那么这笔交易被系统处理的时候，将直接加减双方的ACCOUNT中的资产。在这种模式下，Alice并不能区分这个Input究竟是使用的Output 0输入的ZORRO币还是之前就已经存放在ACCOUNT的ZORRO币。
+ACCOUNT模式也有两个优势
+ ACCOUNT模式直接增减一个独立账户中的资产，只需一个记录就可以增减一个账户的任意数量的资产。因此，生成的记录大小比同样情况下UTXO生成的记录要小很多。 ACCOUNT模式本质上是基于状态的，Input和Output是过程，ACCOUNT是结果，因此它天然就容易将图灵机引进来，这也是为什么支持图灵完备智能合约的区块链系统多采用ACCOUNT模式的原因。  ZORRO的混合模式#ZORRO将UTXO和ACCOUNT模式混合应用，在需要支持隐私保护的地方采用UTXO模式，在需要运行智能合约的地方采用ACCOUNT模式。ZORRO通过交易、共识、以及Pedersen Commitment算法，将这两种模式无缝的整合到一起，使智能合约能发挥令人惊讶的能力。
+ 本文所提到的智能合约，在ZORRO的白皮书中，对应 链上运行智能合约 这个概念
+ 二、匿名交易结构# 在BetaNet网络中，ZORRO的普通交易是强制匿名的。因为如果可以允许任意非匿名交易，那么想要使用匿名功能的用户的隐私安全在关联交易中将得不到保证。另外，如果想要公示自己的资产等信息，建议使用智能合约，有限度的公开部分信息。
+ 在MainNet发布时，ZORRO通过选择隐私级别来获得隐私性和生成速度的平衡。
+ 交易 Tx#ZORRO的匿名交易Tx拥有一个匿名的输入集合Z ins，一个匿名输出集合Z outs，一个普通输出集合O outs，和一个名为From的暂存地址。Z ins完全是匿名的，让第三方观察者无法得知来源和内容，Z outs是完全匿名的UTXO，只有接收者能查看和使用它的内容，O outs携带的内容是非隐藏的，它指向的接受者有两种情况：一种是指向智能合约地址，一种是指向一个暂存地址。From代表着交易发送者，同样也是一个暂存地址。因此整个Tx无法让人确定真实的用户是谁，其中携带的资产等信息也最大程度被隐藏起来。</description>
+    </item>
+    
+    <item>
+      <title>如何在ZORRO上进行Staking</title>
+      <link>https://Ethan-91.github.com/docs/course/how-to-staking-using-gero/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>https://Ethan-91.github.com/docs/course/how-to-staking-using-gero/</guid>
+      <description>如何在ZORRO上进行Staking#  本文主要为全节点后台程序使用者提供，界面钱包的使用者请静待后续说明文档。
+Staking 功能需要在 117600的高度之后才生效
+ 进行Staking需要开启ZORRO的exchange服务，启动时可以加入--exchange --mineMode两个参数：
+./zro --exchange --mineMode --datadir ~/datadir 注意：加入这两个参数后，会对账户余额重新分析，将有一段时间（几个小时）无法看到正确的余额。
+如果需要通过jsonrpc接口调用staking的命令，可以通过加入—rpcapi stake参数开启。开启后jsonrpc的方法名可以跟其他的形式一致，比如stake.buyShare的方法名是stake_buyShare。
+Staking 过程简要描述#  POS 矿工可以在股份池里面购买投票的股份  股份设有股份池，无上限。 股份的价格根据股份池大小动态调整。 股份池大小 326592 以内股份价格的变化比较平衡。 股份池大小超过 326592 后股份价格急剧上升。   POW 矿工计算出区块 HASH 之后，将随机在股份池中选择 3 个股份，并广播选票信息。 POS 矿工收到属于自己的选票信息之后，立即广播自己签名后的投票信息。 POW 矿工在收到 POS 矿工的投票信息之后，将签名放入区块头部信息中。 如果正确的投票超过 2 个，POW 矿工将广播区块，完成出块过程。 POS 矿工可以选择 SOLO 投票或 StakingNode 代投票。 每个区块奖励分为 POW 奖励和 POS 奖励  POW 奖励和 POS 奖励的比例为 4 : 4 POW 奖励和 POS 奖励的大小随各自难度独立变化。   POS 奖励分为 Solo 投票和 StakingNode 代投票两种情况  Solo 奖励和代投票奖励的比例为 3 : 4   完成投票过程后，所涉及的奖励和本金会在最近的一个支付周期（大约1周）内退回。  Share 的生命周期#  用户选择一定的价格购买股份后，本金即进入锁定状态**(Lock)**，股份进入当前的股份池中 **(InPool)**。 POW矿工在出块时随机选择3份股份，被选中的股份进入待投票状态 (Lottery)  至少获得两个投票才能完成出块过程。   POS矿工在接收到待投票消息后，成功将投票信息广播给POW矿工完成出块，股份进入完成状态**(Votted)**  进入完成状态的股份会在一个支付周期(一周)内归还本金和奖励，同时释放股份。   当区块只有两份成功投票的情况下，另外一份股份则进入错失状态**(Missed)**。  作为惩罚，进入错失状态的股份将会在连续锁定3个月后释放本金。   在股份池中没有被成功选中的股份一个月后过期**(Expire)**  过期时会释放本金。    StakingNode的生命周期#  运营者通过锁定20万ZORRO币可以获得运营StakingNode 的权利。 StakingNode在运营一个月后，才能通过手工关闭，进入关闭状态 (Close)  关闭之后将不允许新的股份代投申请。 同时运营者有义务完成现在StakingNode中已有的股份。   StakingNode在同时满足下面两个条件下将归还本金进入结束状态**(Finish)**：  所有代投股份本金全部释放 进入关闭状态    SOLO Staking# 你拥有一个全节点程序(ZORRO)，并且拥有一定数量的 ZORRO 代币，既可进行SOLO，获取POS奖励部分比例为 3 的奖励。</description>
+    </item>
+    
+  </channel>
+</rss>
